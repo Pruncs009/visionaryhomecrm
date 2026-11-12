@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Building2, Mail, MapPin, Phone } from 'lucide-react';
+import { Building2, ChevronDown, ExternalLink, Mail, MapPin, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TeamRole } from '../parties';
 import { EditPersonButton, RemovePersonButton, type EditTarget, type TeamNames } from './deal-people-actions';
@@ -53,7 +53,7 @@ export function DealPeople({ txId, addButton, canRemove, team, teamOptions, grou
       <div className="space-y-4">
         {groups.map((g) => (
           <div key={g.title}>
-            <h3 className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <h3 className="mb-2 text-xs font-bold tracking-wide text-blue-900 uppercase dark:text-blue-300">
               {g.title} ({g.people.length})
             </h3>
             {g.people.length === 0 ? (
@@ -65,19 +65,7 @@ export function DealPeople({ txId, addButton, canRemove, team, teamOptions, grou
                     <Initials name={p.name} />
                     <div className="min-w-0 flex-1 text-sm">
                       <p className="text-xs text-muted-foreground">{p.role}</p>
-                      {p.href ? (
-                        <Link href={p.href} className="font-medium text-primary hover:underline">{p.name}</Link>
-                      ) : (
-                        <p className="font-medium">{p.name}</p>
-                      )}
-                      {(p.company || p.email || p.phone || p.address) && (
-                        <div className="mt-0.5 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                          {p.company && <span className="inline-flex items-center gap-1"><Building2 className="size-3 shrink-0" aria-hidden />{p.company}</span>}
-                          {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 hover:text-foreground"><Phone className="size-3 shrink-0" aria-hidden />{p.phone}</a>}
-                          {p.email && <a href={`mailto:${p.email}`} className="inline-flex min-w-0 items-center gap-1 hover:text-foreground"><Mail className="size-3 shrink-0" aria-hidden /><span className="truncate">{p.email}</span></a>}
-                          {p.address && <span className="inline-flex items-start gap-1"><MapPin className="mt-0.5 size-3 shrink-0" aria-hidden />{p.address}</span>}
-                        </div>
-                      )}
+                      <PersonName person={p} />
                     </div>
                     <div className="ml-auto flex shrink-0 items-center">
                       {p.edit && <EditPersonButton txId={txId} target={p.edit} label={p.name} canRemove={canRemove} team={team} teamOptions={teamOptions} />}
@@ -91,5 +79,33 @@ export function DealPeople({ txId, addButton, canRemove, team, teamOptions, grou
         ))}
       </div>
     </section>
+  );
+}
+
+/** Name in blue with a chevron; clicking it opens the person's contact details. */
+function PersonName({ person: p }: { person: PersonEntry }) {
+  const hasDetails = !!(p.company || p.phone || p.email || p.address);
+  return (
+    <details className="group/details">
+      <summary className="cursor-pointer list-none rounded font-medium text-primary marker:hidden hover:underline [&::-webkit-details-marker]:hidden">
+        <span className="break-words">{p.name}</span>
+        <ChevronDown className="ml-0.5 inline-block size-4 align-[-3px] transition-transform group-open/details:rotate-180" aria-hidden />
+        <span className="sr-only">Show contact details</span>
+      </summary>
+      <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+        {p.company && <span className="inline-flex items-start gap-1"><Building2 className="mt-0.5 size-3 shrink-0" aria-hidden />{p.company}</span>}
+        {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 hover:text-foreground"><Phone className="size-3 shrink-0" aria-hidden />{p.phone}</a>}
+        {p.email && <a href={`mailto:${p.email}`} className="inline-flex min-w-0 items-center gap-1 hover:text-foreground"><Mail className="size-3 shrink-0" aria-hidden /><span className="truncate">{p.email}</span></a>}
+        {p.address && <span className="inline-flex items-start gap-1"><MapPin className="mt-0.5 size-3 shrink-0" aria-hidden />{p.address}</span>}
+        {!hasDetails && (
+          <span>{p.edit?.kind === 'team' ? 'Only the name is saved for team members.' : 'No contact details yet. Use the pencil to add them.'}</span>
+        )}
+        {p.href && (
+          <Link href={p.href} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
+            <ExternalLink className="size-3 shrink-0" aria-hidden />Open contact
+          </Link>
+        )}
+      </div>
+    </details>
   );
 }

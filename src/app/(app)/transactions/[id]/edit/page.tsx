@@ -58,6 +58,8 @@ export default async function EditTransactionPage({ params }: PageProps) {
           appraisal_deadline: d(tx.appraisal_deadline),
           financing_deadline: d(tx.financing_deadline),
           closing_date: d(tx.closing_date),
+          emd_due_date: d(tx.emd_due_date),
+          contingency_end_date: d(tx.contingency_end_date),
         }}
       />
     </div>

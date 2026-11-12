@@ -40,6 +40,8 @@ export type TransactionRow = {
   purchase_price: number | null;
   lead_manager: string | null;
   acquisition_manager: string | null;
+  emd_due_date: string | null;
+  contingency_end_date: string | null;
 };
 
 export type TransactionListResult = {

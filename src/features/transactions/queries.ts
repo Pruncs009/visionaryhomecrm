@@ -20,6 +20,8 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     deal_type: (r.deal_type as string | null) ?? null,
     lead_manager: (r.lead_manager as string | null) ?? null,
     acquisition_manager: (r.acquisition_manager as string | null) ?? null,
+    emd_due_date: (r.emd_due_date as string | null) ?? null,
+    contingency_end_date: (r.contingency_end_date as string | null) ?? null,
   };
 }
 

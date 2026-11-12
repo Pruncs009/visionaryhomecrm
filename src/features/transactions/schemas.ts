@@ -69,6 +69,8 @@ export const transactionFormSchema = z
     appraisal_deadline: optionalDate,
     financing_deadline: optionalDate,
     closing_date: optionalDate,
+    emd_due_date: optionalDate,
+    contingency_end_date: optionalDate,
   })
   .superRefine((d, ctx) => {
     if (d.property_mode === 'existing' && !d.property_id) {

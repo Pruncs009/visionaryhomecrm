@@ -9,6 +9,7 @@ import { getTeamMembers } from '@/features/leads/queries';
 import { KEY_DATES, TX_SIDE } from '@/features/transactions/constants';
 import { DocumentsPanel } from '@/features/transactions/components/documents-panel';
 import { DealNotes } from '@/features/transactions/components/deal-notes';
+import { EditDatesButton } from '@/features/transactions/components/deal-dates-dialog';
 import { DealPeople, type PersonEntry } from '@/features/transactions/components/deal-people';
 import { AddPersonMenu } from '@/features/transactions/components/deal-people-actions';
 import { isClientRole, PARTY_ROLE_LABEL, type DealParty, type PartyRole } from '@/features/transactions/parties';
@@ -201,7 +202,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         </div>
 
         <aside className="order-3 lg:col-span-2 xl:col-span-1">
-          <DatesPanel tx={tx} timezone={timezone} editHref={editHref} />
+          <DatesPanel tx={tx} timezone={timezone} />
         </aside>
       </div>
     </div>
@@ -211,16 +212,17 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
 // -----------------------------------------------------------------------------
 // Right column: dates
 // -----------------------------------------------------------------------------
-function DatesPanel({ tx, timezone, editHref }: { tx: TransactionRow; timezone: string; editHref: string }) {
+function DatesPanel({ tx, timezone }: { tx: TransactionRow; timezone: string }) {
   const finished = tx.status === 'closed' || tx.status === 'cancelled';
   const rows = KEY_DATES.map((k) => ({ ...k, date: tx[k.key] as string | null }));
+  const dates = Object.fromEntries(rows.map((r) => [r.key, r.date]));
   const nextKey = finished ? null : rows.filter((r) => r.date && daysUntil(r.date, timezone) >= 0).sort((a, b) => a.date!.localeCompare(b.date!))[0]?.key;
 
   return (
     <section aria-labelledby="dates-heading" className="rounded-xl border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 id="dates-heading" className="font-semibold">Dates</h2>
-        <Link href={editHref} aria-label="Edit dates" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><Plus className="size-4" /></Link>
+        <EditDatesButton txId={tx.id} dates={dates} variant="plus" />
       </div>
       <ul className="space-y-1.5">
         {rows.map((r) => {
@@ -238,7 +240,7 @@ function DatesPanel({ tx, timezone, editHref }: { tx: TransactionRow; timezone: 
                   )}
                 </span>
               ) : (
-                <Link href={editHref} className="text-xs font-semibold text-primary uppercase hover:underline">Add</Link>
+                <EditDatesButton txId={tx.id} dates={dates} focusKey={r.key} variant="add" />
               )}
             </li>
           );

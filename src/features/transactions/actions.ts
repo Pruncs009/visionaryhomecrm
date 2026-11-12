@@ -20,7 +20,7 @@ const FIELDS = [
   'new_state', 'new_postal_code', 'list_price', 'buyer_contact_id', 'seller_contact_id', 'buyer_name', 'seller_name',
   'purchase_price', 'agent_id', 'offer_price',
   'sale_price', 'earnest_money', 'commission_rate', 'commission_amount', 'contract_date', 'inspection_deadline',
-  'appraisal_deadline', 'financing_deadline', 'closing_date',
+  'appraisal_deadline', 'financing_deadline', 'closing_date', 'emd_due_date', 'contingency_end_date',
 ] as const;
 
 function readForm(formData: FormData) {
@@ -98,6 +98,8 @@ export async function saveTransaction(_prev: ActionState, formData: FormData): P
       buyer_name: d.buyer_name,
       seller_name: d.seller_name,
       purchase_price: d.purchase_price,
+      emd_due_date: d.emd_due_date,
+      contingency_end_date: d.contingency_end_date,
       ...(!d.transaction_id && stage.success && stage.data !== 'under_contract' ? { deal_stage: stage.data } : {}),
     })
     .eq('organization_id', ctx.organization.id)

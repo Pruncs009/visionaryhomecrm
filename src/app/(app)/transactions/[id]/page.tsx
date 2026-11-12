@@ -1,128 +1,341 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Home, KeyRound, Pencil, Signpost } from 'lucide-react';
+import { ArrowLeft, CalendarCheck, CircleCheck, FileText, KeyRound, Pencil, Plus, StickyNote, Flag, Sparkles } from 'lucide-react';
+import { NavHighlight } from '@/components/layout/nav-highlight';
 import { buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireContext } from '@/features/auth/guards';
 import { getTeamMembers } from '@/features/leads/queries';
-import { TX_SIDE } from '@/features/transactions/constants';
+import { KEY_DATES, TX_SIDE } from '@/features/transactions/constants';
 import { DocumentsPanel } from '@/features/transactions/components/documents-panel';
-import { KeyDates } from '@/features/transactions/components/key-dates';
-import { DealStageBadge, DealStageSelect } from '@/features/deals/components/deal-stage';
+import { DealNotes } from '@/features/transactions/components/deal-notes';
+import { DealPeople } from '@/features/transactions/components/deal-people';
+import { DealTasks } from '@/features/transactions/components/deal-tasks';
+import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
+import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
 import { DeleteTransactionButton, TxAgentSelect } from '@/features/transactions/components/tx-controls';
-import { getTransaction, getTransactionFiles } from '@/features/transactions/queries';
+import { getDealWorkspace, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
+import type { DealWorkspace, TransactionFile, TransactionRow } from '@/features/transactions/types';
 import { isValidTimeZone } from '@/lib/dates';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
-export const metadata: Metadata = { title: 'Transaction' };
+export const metadata: Metadata = { title: 'Deal' };
 
-type PageProps = { params: Promise<{ id: string }> };
+const TABS = [
+  { key: 'timeline', label: 'Timeline' },
+  { key: 'tasks', label: 'Tasks' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'details', label: 'Details' },
+  { key: 'docs', label: 'Docs' },
+  { key: 'financials', label: 'Financials' },
+] as const;
+type TabKey = (typeof TABS)[number]['key'];
 
-export default async function TransactionDetailPage({ params }: PageProps) {
-  const { id } = await params;
+const SIDE_BADGE: Record<TransactionRow['side'], string> = { buyer: 'Buyer', seller: 'Seller', dual: 'Dual' };
+
+type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> };
+
+export default async function TransactionDetailPage({ params, searchParams }: PageProps) {
+  const [{ id }, sp] = await Promise.all([params, searchParams]);
   if (!uuidSchema.safeParse(id).success) notFound();
+  const tab: TabKey = TABS.some((t) => t.key === sp.tab) ? (sp.tab as TabKey) : 'tasks';
+
   const ctx = await requireContext();
   const org = ctx.organization.id;
-  const [tx, files, members] = await Promise.all([
-    getTransaction(org, id),
-    getTransactionFiles(org, id),
-    getTeamMembers(org),
-  ]);
+  const tx = await getTransaction(org, id);
   if (!tx) notFound();
 
   const timezone = isValidTimeZone(ctx.profile?.timezone) ? ctx.profile!.timezone : 'America/New_York';
-  const price = tx.sale_price ?? tx.offer_price;
-  const commission =
-    tx.commission_amount ?? (price !== null && tx.commission_rate !== null ? (price * tx.commission_rate) / 100 : null);
+  const [files, members, ws] = await Promise.all([
+    getTransactionFiles(org, id),
+    getTeamMembers(org),
+    getDealWorkspace(org, tx, timezone),
+  ]);
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   const canDelete = ctx.role !== 'assistant';
+  const editHref = `/transactions/${tx.id}/edit`;
+  const prop = ws.property;
+  const openTasks = ws.tasks.filter((t) => !t.done).length;
+
+  const specs = [
+    prop?.bedrooms != null && `${prop.bedrooms} Bed`,
+    prop?.bathrooms != null && `${prop.bathrooms} Bath`,
+    prop?.squareFeet != null && `${prop.squareFeet.toLocaleString('en-US')} SF`,
+    prop?.yearBuilt != null && `Built ${prop.yearBuilt}`,
+  ].filter(Boolean) as string[];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1500px] space-y-4">
+      <NavHighlight href={stageHref(tx.deal_stage)} />
       <Link href={stageHref(tx.deal_stage)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" aria-hidden /> {DEAL_STAGE[tx.deal_stage].label}
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">{tx.name}</h1>
-            <DealStageBadge stage={tx.deal_stage} />
+      {/* ---- Header ------------------------------------------------------------ */}
+      <header className="flex flex-col gap-5 rounded-xl border bg-card p-5 lg:flex-row lg:items-start">
+        <div className="flex min-w-0 flex-1 gap-4">
+          <div className="hidden size-24 shrink-0 items-center justify-center rounded-lg bg-muted sm:flex" aria-hidden>
+            <KeyRound className="size-10 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {[tx.property_address, tx.property_city, tx.property_state].filter(Boolean).join(', ')} · {TX_SIDE[tx.side]}
-          </p>
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-semibold tracking-wide text-primary uppercase">{SIDE_BADGE[tx.side]}</span>
+              <span className="text-muted-foreground">{TX_SIDE[tx.side]}{prop?.propertyType ? ` ·${label(prop.propertyType)}` : ''}</span>
+            </div>
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{tx.property_address || tx.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {[tx.property_city, [tx.property_state, prop?.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
+              {prop?.mlsNumber && <> <span aria-hidden>|</span> MLS# {prop.mlsNumber}</>}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {specs.length > 0 ? specs.join(' · ') : null}
+              {tx.name !== tx.property_address && <>{specs.length > 0 && <span aria-hidden> | </span>}Deal: {tx.name}</>}
+            </p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/transactions/${tx.id}/edit`} className={buttonVariants({ variant: 'outline' })}><Pencil /> Edit</Link>
-          {canDelete && <DeleteTransactionButton id={tx.id} name={tx.name} />}
-        </div>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <KeyDates tx={tx} timezone={timezone} />
-          <DocumentsPanel orgId={org} transactionId={tx.id} files={files} timezone={timezone} canDelete={canDelete} />
+        <dl className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-[auto_auto_minmax(12rem,auto)]">
+          <div>
+            <dt className="text-xs text-muted-foreground">{tx.sale_price !== null ? 'Close price' : 'Offer price'}</dt>
+            <dd className="text-lg font-semibold tabular-nums">{money(tx.sale_price ?? tx.offer_price)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Listing price</dt>
+            <dd className="text-lg font-semibold tabular-nums">{money(prop?.listPrice ?? null)}</dd>
+          </div>
+          <div className="col-span-2 space-y-3 sm:col-span-1 sm:row-span-2">
+            <div className="space-y-1">
+              <dt className="text-xs text-muted-foreground">Primary agent</dt>
+              <dd><TxAgentSelect id={tx.id} agentId={tx.agent_id} members={members} /></dd>
+            </div>
+            <div className="space-y-1">
+              <dt><label htmlFor="deal-stage" className="text-xs text-muted-foreground">Status</label></dt>
+              {/* key: reset the optimistic value when the server data changes */}
+              <dd><DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} /></dd>
+            </div>
+          </div>
+          <div className="col-span-2 flex gap-2">
+            <Link href={editHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil /> Edit deal</Link>
+            {canDelete && <DeleteTransactionButton id={tx.id} name={tx.name} />}
+          </div>
+        </dl>
+      </header>
+
+      {/* ---- Three columns ------------------------------------------------------ */}
+      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_300px]">
+        <div className="order-2 lg:order-1">
+          <DealPeople
+            editHref={editHref}
+            groups={[
+              {
+                title: 'Clients',
+                people: [
+                  ...(tx.side !== 'seller' ? [{ role: 'Buyer', name: tx.buyer_name, href: tx.buyer_contact_id ? `/contacts/${tx.buyer_contact_id}` : undefined, ...(tx.buyer_contact_id ? ws.contacts[tx.buyer_contact_id] : {}) }] : []),
+                  ...(tx.side !== 'buyer' ? [{ role: 'Seller', name: tx.seller_name, href: tx.seller_contact_id ? `/contacts/${tx.seller_contact_id}` : undefined, ...(tx.seller_contact_id ? ws.contacts[tx.seller_contact_id] : {}) }] : []),
+                ],
+              },
+              {
+                title: 'Team',
+                people: [{ role: tx.side === 'seller' ? "Listing agent" : tx.side === 'buyer' ? "Buyer's agent" : 'Agent', name: tx.agent_name }],
+              },
+            ]}
+          />
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader><CardTitle>Deal</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <label htmlFor="deal-stage" className="text-sm font-medium">Stage</label>
-                {/* key: reset the optimistic value when the server data changes */}
-                <DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} />
-              </div>
-              <div className="space-y-1.5"><p className="text-sm font-medium">Assigned agent</p><TxAgentSelect id={tx.id} agentId={tx.agent_id} members={members} /></div>
-              <dl className="grid grid-cols-2 gap-3 border-t pt-4 text-sm">
-                <Stat label={tx.sale_price !== null ? 'Sale price' : 'Offer price'} value={price !== null ? formatCurrency(price) : '—'} />
-                <Stat label="Earnest money" value={tx.earnest_money !== null ? formatCurrency(tx.earnest_money) : '—'} />
-                <Stat label="Commission" value={commission !== null ? formatCurrency(commission) : '—'} />
-                <Stat label="Rate" value={tx.commission_rate !== null ? `${tx.commission_rate}%` : '—'} />
-              </dl>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Parties</CardTitle></CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm">
-                <Party icon={Home} role="Property" name={tx.property_address} />
-                <Party icon={KeyRound} role="Buyer" name={tx.buyer_name} href={tx.buyer_contact_id ? `/contacts/${tx.buyer_contact_id}` : undefined} />
-                <Party icon={Signpost} role="Seller" name={tx.seller_name} href={tx.seller_contact_id ? `/contacts/${tx.seller_contact_id}` : undefined} />
-              </ul>
-            </CardContent>
-          </Card>
+        <div className="order-1 min-w-0 rounded-xl border bg-card lg:order-2">
+          <nav aria-label="Deal sections" className="flex gap-1 overflow-x-auto border-b px-3">
+            {TABS.map((t) => {
+              const active = t.key === tab;
+              const badge = t.key === 'tasks' ? openTasks : t.key === 'notes' ? ws.notes.length : t.key === 'docs' ? files.length : 0;
+              return (
+                <Link
+                  key={t.key}
+                  href={`?tab=${t.key}`}
+                  scroll={false}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    '-mb-px flex items-center gap-1.5 border-b-2 px-3 py-3 text-xs font-semibold tracking-wide whitespace-nowrap uppercase transition-colors',
+                    active ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t.label}
+                  {badge > 0 && <span className="rounded-full bg-muted px-1.5 text-[0.65rem] text-muted-foreground tabular-nums">{badge}</span>}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="p-5">
+            {tab === 'tasks' && <DealTasks txId={tx.id} tasks={ws.tasks} members={members} today={today} canDelete={canDelete} />}
+            {tab === 'notes' && <DealNotes txId={tx.id} notes={ws.notes} timezone={timezone} canDelete={canDelete} />}
+            {tab === 'docs' && <DocumentsPanel orgId={org} transactionId={tx.id} files={files} timezone={timezone} canDelete={canDelete} />}
+            {tab === 'details' && <Details tx={tx} ws={ws} editHref={editHref} />}
+            {tab === 'financials' && <Financials tx={tx} ws={ws} editHref={editHref} />}
+            {tab === 'timeline' && <Timeline tx={tx} ws={ws} files={files} timezone={timezone} />}
+          </div>
         </div>
+
+        <aside className="order-3 lg:col-span-2 xl:col-span-1">
+          <DatesPanel tx={tx} timezone={timezone} editHref={editHref} />
+        </aside>
       </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="font-medium tabular-nums">{value}</dd>
-    </div>
-  );
-}
+// -----------------------------------------------------------------------------
+// Right column: dates
+// -----------------------------------------------------------------------------
+function DatesPanel({ tx, timezone, editHref }: { tx: TransactionRow; timezone: string; editHref: string }) {
+  const finished = tx.status === 'closed' || tx.status === 'cancelled';
+  const rows = KEY_DATES.map((k) => ({ ...k, date: tx[k.key] as string | null }));
+  const nextKey = finished ? null : rows.filter((r) => r.date && daysUntil(r.date, timezone) >= 0).sort((a, b) => a.date!.localeCompare(b.date!))[0]?.key;
 
-function Party({ icon: Icon, role, name, href }: { icon: React.ElementType; role: string; name: string | null; href?: string }) {
   return (
-    <li className="flex items-start gap-2">
-      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{role}</p>
-        {name ? (
-          href ? <Link href={href} className="font-medium text-primary hover:underline">{name}</Link> : <p className="font-medium">{name}</p>
-        ) : (
-          <p className="text-muted-foreground">Not set</p>
+    <section aria-labelledby="dates-heading" className="rounded-xl border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 id="dates-heading" className="font-semibold">Dates</h2>
+        <Link href={editHref} aria-label="Edit dates" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><Plus className="size-4" /></Link>
+      </div>
+      <ul className="space-y-1.5">
+        {rows.map((r) => {
+          const days = r.date ? daysUntil(r.date, timezone) : null;
+          const overdue = days !== null && days < 0 && !finished && r.key !== 'contract_date';
+          const isNext = r.key === nextKey;
+          return (
+            <li key={r.key} className={cn('flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-sm', isNext ? 'bg-primary/10' : overdue ? 'bg-critical/10' : 'bg-muted/50')}>
+              <span className={cn(isNext && 'font-medium text-primary', overdue && 'font-medium text-critical')}>{r.label}</span>
+              {r.date ? (
+                <span className="text-right tabular-nums">
+                  {formatDateOnly(r.date, { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                  {!finished && days !== null && (isNext || overdue) && (
+                    <span className={cn('block text-xs', overdue ? 'text-critical' : 'text-primary')}>{overdue ? `Overdue · ${relativeDays(days)}` : relativeDays(days)}</span>
+                  )}
+                </span>
+              ) : (
+                <Link href={editHref} className="text-xs font-semibold text-primary uppercase hover:underline">Add</Link>
+              )}
+            </li>
+          );
+        })}
+        {tx.closed_at && (
+          <li className="flex items-center justify-between gap-3 rounded-md bg-success/10 px-3 py-2.5 text-sm">
+            <span className="font-medium text-success">Closed</span>
+            <span className="tabular-nums">{new Intl.DateTimeFormat('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: timezone }).format(new Date(tx.closed_at))}</span>
+          </li>
         )}
-      </div>
-    </li>
+      </ul>
+    </section>
   );
 }
+
+// -----------------------------------------------------------------------------
+// Tabs rendered on the server
+// -----------------------------------------------------------------------------
+function Details({ tx, ws, editHref }: { tx: TransactionRow; ws: DealWorkspace; editHref: string }) {
+  const p = ws.property;
+  return (
+    <section className="space-y-6">
+      <TabHeading title="Details" editHref={editHref} />
+      <Grid items={[
+        ['Deal name', tx.name],
+        ['Side', TX_SIDE[tx.side]],
+        ['Stage', DEAL_STAGE[tx.deal_stage].label],
+        ['Primary agent', tx.agent_name ?? 'Unassigned'],
+        ['Buyer', tx.buyer_name ?? '—'],
+        ['Seller', tx.seller_name ?? '—'],
+      ]} />
+      <div>
+        <h3 className="mb-3 text-sm font-semibold">Property</h3>
+        <Grid items={[
+          ['Address', [tx.property_address, tx.property_city, [tx.property_state, p?.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ')],
+          ['Type', p ? label(p.propertyType) : '—'],
+          ['MLS #', p?.mlsNumber ?? '—'],
+          ['Bedrooms', p?.bedrooms != null ? String(p.bedrooms) : '—'],
+          ['Bathrooms', p?.bathrooms != null ? String(p.bathrooms) : '—'],
+          ['Square feet', p?.squareFeet != null ? p.squareFeet.toLocaleString('en-US') : '—'],
+          ['Year built', p?.yearBuilt != null ? String(p.yearBuilt) : '—'],
+        ]} />
+      </div>
+    </section>
+  );
+}
+
+function Financials({ tx, ws, editHref }: { tx: TransactionRow; ws: DealWorkspace; editHref: string }) {
+  const price = tx.sale_price ?? tx.offer_price;
+  const commission = tx.commission_amount ?? (price !== null && tx.commission_rate !== null ? (price * tx.commission_rate) / 100 : null);
+  return (
+    <section className="space-y-6">
+      <TabHeading title="Financials" editHref={editHref} />
+      <Grid items={[
+        ['Listing price', money(ws.property?.listPrice ?? null)],
+        ['Offer price', money(tx.offer_price)],
+        ['Close price', money(tx.sale_price)],
+        ['Earnest money', money(tx.earnest_money)],
+        ['Commission rate', tx.commission_rate !== null ? `${tx.commission_rate}%` : '—'],
+        ['Commission (GCI)', money(commission)],
+      ]} />
+    </section>
+  );
+}
+
+type TimelineEvent = { at: string; icon: React.ElementType; text: string; tone?: 'primary' | 'success' };
+
+function Timeline({ tx, ws, files, timezone }: { tx: TransactionRow; ws: DealWorkspace; files: TransactionFile[]; timezone: string }) {
+  const events: TimelineEvent[] = [
+    { at: tx.created_at, icon: Sparkles, text: 'Deal created' },
+    ...(tx.contract_date ? [{ at: `${tx.contract_date}T12:00:00Z`, icon: Flag, text: 'Contract signed', tone: 'primary' as const }] : []),
+    ...(tx.closed_at ? [{ at: tx.closed_at, icon: CalendarCheck, text: 'Deal closed', tone: 'success' as const }] : []),
+    ...ws.tasks.filter((t) => t.done && t.completedAt).map((t) => ({ at: t.completedAt!, icon: CircleCheck, text: `Task completed: ${t.title}` })),
+    ...ws.notes.map((n) => ({ at: n.createdAt, icon: StickyNote, text: `${n.authorName ?? 'Someone'} added a note: ${n.body.length > 120 ? `${n.body.slice(0, 120)}…` : n.body}` })),
+    ...files.map((f) => ({ at: f.createdAt, icon: FileText, text: `${f.uploaderName ?? 'Someone'} uploaded ${f.fileName}` })),
+  ].sort((a, b) => b.at.localeCompare(a.at));
+  const when = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: timezone });
+
+  return (
+    <section className="space-y-4">
+      <h2 className="text-base font-semibold">Timeline</h2>
+      <ol className="relative space-y-4 border-l pl-6">
+        {events.map((e, i) => {
+          const Icon = e.icon;
+          return (
+            <li key={i} className="relative">
+              <span className={cn('absolute top-0 -left-[2.0625rem] flex size-6 items-center justify-center rounded-full bg-card ring-1 ring-foreground/10',
+                e.tone === 'primary' && 'ring-primary', e.tone === 'success' && 'ring-success')}>
+                <Icon className={cn('size-3.5 text-muted-foreground', e.tone === 'primary' && 'text-primary', e.tone === 'success' && 'text-success')} aria-hidden />
+              </span>
+              <p className="text-sm">{e.text}</p>
+              <p className="text-xs text-muted-foreground"><time dateTime={e.at}>{when.format(new Date(e.at))}</time></p>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function TabHeading({ title, editHref }: { title: string; editHref: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <Link href={editHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil /> Edit</Link>
+    </div>
+  );
+}
+
+function Grid({ items }: { items: [string, string][] }) {
+  return (
+    <dl className="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
+      {items.map(([k, v]) => (
+        <div key={k}>
+          <dt className="text-xs text-muted-foreground">{k}</dt>
+          <dd className="font-medium">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const money = (v: number | null) => (v !== null ? formatCurrency(v) : '—');
+const label = (s: string | null | undefined) => (s ? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : '—');

@@ -10,6 +10,7 @@ import {
 import { mainNav, type NavIcon } from '@/config/navigation';
 import type { DealStage } from '@/features/deals/constants';
 import { cn } from '@/lib/utils';
+import { useNavHighlight } from './nav-highlight';
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -29,6 +30,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 
 export function Sidebar({ counts }: { counts: Partial<Record<DealStage, number>> }) {
   const pathname = usePathname();
+  const highlight = useNavHighlight();
 
   return (
     <aside className="hidden w-60 shrink-0 border-r p-4 md:block">
@@ -38,7 +40,7 @@ export function Sidebar({ counts }: { counts: Partial<Record<DealStage, number>>
       <nav aria-label="Main" className="space-y-0.5">
         {mainNav.map((item, i) => {
           const Icon = ICONS[item.icon];
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || highlight === item.href;
           const count = item.stage ? counts[item.stage] ?? 0 : null;
           // Thin dividers: [Dashboard] | [deal stages] | [Calendar, Reports, Settings]
           const divider = i === 1 || (item.icon === 'calendar');
@@ -50,13 +52,20 @@ export function Sidebar({ counts }: { counts: Partial<Record<DealStage, number>>
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors',
-                  active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  active
+                    ? 'bg-primary font-medium text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-primary/10 hover:text-primary',
                 )}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
                 <span className="flex-1 truncate">{item.title}</span>
                 {count !== null && count > 0 && (
-                  <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${count} deals`}>{count}</span>
+                  <span
+                    className={cn('rounded-full px-1.5 text-xs tabular-nums', active ? 'bg-primary-foreground/20 text-primary-foreground' : 'text-muted-foreground')}
+                    aria-label={`${count} deals`}
+                  >
+                    {count}
+                  </span>
                 )}
               </Link>
             </div>

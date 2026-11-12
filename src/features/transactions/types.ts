@@ -54,4 +54,39 @@ export type TransactionFile = {
   uploaderName: string | null;
 };
 
-export type Option = { id: string; label: string; detail?: string };
+export type DealTask = {
+  id: string;
+  title: string;
+  done: boolean;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  /** Due date as YYYY-MM-DD in the viewer's timezone */
+  dueDate: string | null;
+  completedAt: string | null;
+  assignedTo: string | null;
+};
+
+export type DealNote = {
+  id: string;
+  body: string;
+  isPinned: boolean;
+  createdAt: string;
+  authorName: string | null;
+};
+
+export type DealWorkspace = {
+  property: {
+    postalCode: string | null;
+    mlsNumber: string | null;
+    propertyType: string | null;
+    listPrice: number | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    squareFeet: number | null;
+    yearBuilt: number | null;
+  } | null;
+  contacts: Record<string, { email: string | null; phone: string | null }>;
+  tasks: DealTask[];
+  notes: DealNote[];
+};
+
+export type Option ={ id: string; label: string; detail?: string };

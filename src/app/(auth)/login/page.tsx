@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
       description="Sign in to your CRM"
       footer={
         <>
-          New to VisionaryHomeCRM?{' '}
+          New to Visionary Home Offer?{' '}
           <Link href="/signup" className="font-medium text-primary hover:underline">
             Create an account
           </Link>

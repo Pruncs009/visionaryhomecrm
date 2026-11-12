@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: { default: 'VisionaryHomeCRM', template: '%s | VisionaryHomeCRM' },
+  title: { default: 'Visionary Home Offer', template: '%s | Visionary Home Offer' },
   description: 'Real estate CRM for agents and teams',
 };
 

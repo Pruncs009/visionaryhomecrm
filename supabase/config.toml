@@ -30,11 +30,11 @@ max_frequency = "60s"            # one email per address per minute
 # links land on /auth/callback, which the app handles. After adding SMTP, uncomment and run
 #   npx supabase config push --remote
 # [auth.email.template.confirmation]
-# subject = "Confirm your VisionaryHomeCRM account"
+# subject = "Confirm your Visionary Home Offer account"
 # content_path = "./supabase/templates/confirmation.html"
 #
 # [auth.email.template.recovery]
-# subject = "Reset your VisionaryHomeCRM password"
+# subject = "Reset your Visionary Home Offer password"
 # content_path = "./supabase/templates/recovery.html"
 
 # ---- Hosted production project (Vercel: visionaryhomecrm.vercel.app) ----------

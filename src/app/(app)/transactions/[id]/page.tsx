@@ -14,7 +14,8 @@ import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
-import { DeleteTransactionButton, TxAgentSelect } from '@/features/transactions/components/tx-controls';
+import { DealHeaderField, DEAL_TYPE_SUGGESTIONS } from '@/features/deals/components/deal-header-field';
+import { DeleteTransactionButton } from '@/features/transactions/components/tx-controls';
 import { getDealWorkspace, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
 import type { DealWorkspace, TransactionFile, TransactionRow } from '@/features/transactions/types';
@@ -93,34 +94,29 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               {specs.length > 0 ? specs.join(' · ') : null}
               {tx.name !== tx.property_address && <>{specs.length > 0 && <span aria-hidden> | </span>}Deal: {tx.name}</>}
             </p>
+            <div className="grid gap-3 pt-2 sm:grid-cols-2 sm:max-w-md">
+              <DealHeaderField id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" />
+              <DealHeaderField id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
+            </div>
           </div>
         </div>
 
-        <dl className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-[auto_auto_minmax(12rem,auto)]">
-          <div>
-            <dt className="text-xs text-muted-foreground">{tx.sale_price !== null ? 'Close price' : 'Offer price'}</dt>
-            <dd className="text-lg font-semibold tabular-nums">{money(tx.sale_price ?? tx.offer_price)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Listing price</dt>
-            <dd className="text-lg font-semibold tabular-nums">{money(prop?.listPrice ?? null)}</dd>
-          </div>
+        <div className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,auto)_minmax(12rem,auto)]">
+          <DealHeaderField id={tx.id} field="purchase_price" value={tx.purchase_price} inputClassName="h-9 text-lg font-semibold md:text-lg" />
           <div className="col-span-2 space-y-3 sm:col-span-1 sm:row-span-2">
+            <DealHeaderField id={tx.id} field="lead_manager" value={tx.lead_manager} placeholder="Name" />
+            <DealHeaderField id={tx.id} field="acquisition_manager" value={tx.acquisition_manager} placeholder="Name" />
             <div className="space-y-1">
-              <dt className="text-xs text-muted-foreground">Primary agent</dt>
-              <dd><TxAgentSelect id={tx.id} agentId={tx.agent_id} members={members} /></dd>
-            </div>
-            <div className="space-y-1">
-              <dt><label htmlFor="deal-stage" className="text-xs text-muted-foreground">Status</label></dt>
+              <label htmlFor="deal-stage" className="block text-xs text-muted-foreground">Status</label>
               {/* key: reset the optimistic value when the server data changes */}
-              <dd><DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} /></dd>
+              <DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} />
             </div>
           </div>
-          <div className="col-span-2 flex gap-2">
+          <div className="col-span-2 flex flex-wrap items-end gap-2 sm:col-span-1">
             <Link href={editHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil /> Edit deal</Link>
             {canDelete && <DeleteTransactionButton id={tx.id} name={tx.name} />}
           </div>
-        </dl>
+        </div>
       </header>
 
       {/* ---- Three columns ------------------------------------------------------ */}

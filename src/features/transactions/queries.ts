@@ -13,6 +13,12 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     earnest_money: num(r.earnest_money),
     commission_rate: num(r.commission_rate),
     commission_amount: num(r.commission_amount),
+    purchase_price: num(r.purchase_price),
+    // Older databases (before migration 11) don't have these columns yet.
+    campaign_name: (r.campaign_name as string | null) ?? null,
+    deal_type: (r.deal_type as string | null) ?? null,
+    lead_manager: (r.lead_manager as string | null) ?? null,
+    acquisition_manager: (r.acquisition_manager as string | null) ?? null,
   };
 }
 

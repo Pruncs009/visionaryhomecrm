@@ -35,6 +35,11 @@ export type TransactionRow = {
   seller_name: string | null;
   agent_name: string | null;
   next_deadline: string | null;
+  campaign_name: string | null;
+  deal_type: string | null;
+  purchase_price: number | null;
+  lead_manager: string | null;
+  acquisition_manager: string | null;
 };
 
 export type TransactionListResult = {

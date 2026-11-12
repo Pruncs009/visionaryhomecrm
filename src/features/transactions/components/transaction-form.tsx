@@ -20,6 +20,7 @@ export function TransactionForm({
   members,
   submitLabel,
   cancelHref,
+  dealStage,
 }: {
   defaults: Defaults;
   contacts: Option[];
@@ -27,6 +28,8 @@ export function TransactionForm({
   members: TeamMember[];
   submitLabel: string;
   cancelHref: string;
+  /** New deal started from a deal-stage page: lands in that stage. */
+  dealStage?: string;
 }) {
   const [state, formAction, isPending] = useActionState(saveTransaction, {});
   const v: Defaults = state.values ?? defaults;
@@ -58,6 +61,7 @@ export function TransactionForm({
       <input type="hidden" name="transaction_id" value={v.transaction_id ?? ''} />
       <input type="hidden" name="property_mode" value={propertyMode} />
       <input type="hidden" name="property_label" value={propertyLabel} />
+      {dealStage && <input type="hidden" name="deal_stage" value={dealStage} />}
       <FormMessage error={state.error} />
 
       <div key={JSON.stringify(state.values ?? null)} className="grid gap-6 lg:grid-cols-2">

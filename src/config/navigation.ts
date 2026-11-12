@@ -1,17 +1,20 @@
-export type NavItem = { title: string; href: string };
+import { DEAL_STAGE, DEAL_STAGE_VALUES, stageHref, type DealStage } from '@/features/deals/constants';
+
+/**
+ * Left-hand menu. Deal stages sit between Dashboard and Calendar; each one lists
+ * the deals in that stage. Other modules (Leads, Contacts, Transactions, Team…)
+ * still work at their URLs; they're just not in the menu.
+ */
+export type NavItem = { title: string; href: string; icon: NavIcon; stage?: DealStage };
+export type NavIcon =
+  | 'dashboard' | 'calendar' | 'reports' | 'settings'
+  | 'under_contract' | 'under_dispo' | 'under_rehab' | 'ab_closing' | 'bc_closing' | 'ac_closing'
+  | 'closed' | 'off_market' | 'dead';
 
 export const mainNav: NavItem[] = [
-  { title: 'Dashboard', href: '/dashboard' },
-  { title: 'Leads', href: '/leads' },
-  { title: 'Contacts', href: '/contacts' },
-  { title: 'Buyers', href: '/buyers' },
-  { title: 'Sellers', href: '/sellers' },
-  { title: 'Properties', href: '/properties' },
-  { title: 'Transactions', href: '/transactions' },
-  { title: 'Tasks', href: '/tasks' },
-  { title: 'Calendar', href: '/calendar' },
-  { title: 'Reports', href: '/reports' },
-  { title: 'Automations', href: '/automations' },
-  { title: 'Team', href: '/team' },
-  { title: 'Settings', href: '/settings' },
+  { title: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
+  ...DEAL_STAGE_VALUES.map((s) => ({ title: DEAL_STAGE[s].label, href: stageHref(s), icon: s, stage: s })),
+  { title: 'Calendar', href: '/calendar', icon: 'calendar' },
+  { title: 'Reports', href: '/reports', icon: 'reports' },
+  { title: 'Settings', href: '/settings', icon: 'settings' },
 ];

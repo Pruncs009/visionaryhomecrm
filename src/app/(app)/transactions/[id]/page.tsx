@@ -9,8 +9,9 @@ import { getTeamMembers } from '@/features/leads/queries';
 import { TX_SIDE } from '@/features/transactions/constants';
 import { DocumentsPanel } from '@/features/transactions/components/documents-panel';
 import { KeyDates } from '@/features/transactions/components/key-dates';
-import { DeleteTransactionButton, TxAgentSelect, TxStatusSelect } from '@/features/transactions/components/tx-controls';
-import { TxStatusBadge } from '@/features/transactions/components/tx-bits';
+import { DealStageBadge, DealStageSelect } from '@/features/deals/components/deal-stage';
+import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
+import { DeleteTransactionButton, TxAgentSelect } from '@/features/transactions/components/tx-controls';
 import { getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
 import { isValidTimeZone } from '@/lib/dates';
@@ -40,15 +41,15 @@ export default async function TransactionDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <Link href="/transactions" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> All transactions
+      <Link href={stageHref(tx.deal_stage)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="size-4" aria-hidden /> {DEAL_STAGE[tx.deal_stage].label}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{tx.name}</h1>
-            <TxStatusBadge status={tx.status} />
+            <DealStageBadge stage={tx.deal_stage} />
           </div>
           <p className="text-sm text-muted-foreground">
             {[tx.property_address, tx.property_city, tx.property_state].filter(Boolean).join(', ')} · {TX_SIDE[tx.side]}
@@ -70,7 +71,11 @@ export default async function TransactionDetailPage({ params }: PageProps) {
           <Card>
             <CardHeader><CardTitle>Deal</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-1.5"><p className="text-sm font-medium">Status</p><TxStatusSelect id={tx.id} status={tx.status} /></div>
+              <div className="space-y-1.5">
+                <label htmlFor="deal-stage" className="text-sm font-medium">Stage</label>
+                {/* key: reset the optimistic value when the server data changes */}
+                <DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} />
+              </div>
               <div className="space-y-1.5"><p className="text-sm font-medium">Assigned agent</p><TxAgentSelect id={tx.id} agentId={tx.agent_id} members={members} /></div>
               <dl className="grid grid-cols-2 gap-3 border-t pt-4 text-sm">
                 <Stat label={tx.sale_price !== null ? 'Sale price' : 'Offer price'} value={price !== null ? formatCurrency(price) : '—'} />

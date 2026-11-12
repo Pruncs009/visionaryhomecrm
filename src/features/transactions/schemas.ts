@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEAL_STAGE_VALUES } from '@/features/deals/constants';
 import { FILE_CATEGORY_VALUES, TX_SIDE_VALUES, TX_STATUS_VALUES } from './constants';
 
 const optionalUuid = z
@@ -87,6 +88,8 @@ export const transactionFormSchema = z
 export type TransactionFormValues = z.infer<typeof transactionFormSchema>;
 
 export const transactionFiltersSchema = z.object({
+  /** Deal-stage pages (/deals/[stage]); when set, `view` is ignored. */
+  stage: z.enum(DEAL_STAGE_VALUES).optional().catch(undefined),
   view: z.enum(['active', 'closed', 'cancelled', 'all']).optional().catch(undefined),
   agent: z.union([z.literal('me'), z.literal('unassigned'), z.string().uuid()]).optional().catch(undefined),
   q: z.string().trim().max(100).optional().catch(undefined),

@@ -1,3 +1,4 @@
+import type { DealStage } from '@/features/deals/constants';
 import type { FileCategory, TransactionSide, TransactionStatus } from '@/types/database.types';
 
 /** Row of public.transaction_list */
@@ -7,6 +8,7 @@ export type TransactionRow = {
   name: string;
   side: TransactionSide;
   status: TransactionStatus;
+  deal_stage: DealStage;
   property_id: string;
   buyer_id: string | null;
   seller_id: string | null;

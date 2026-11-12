@@ -6,29 +6,42 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { TX_SIDE } from '../constants';
 import type { TransactionFilters } from '../schemas';
 import type { TransactionListResult } from '../types';
-import { daysUntil, formatDateOnly, relativeDays, TxStatusBadge } from './tx-bits';
+import { DealStageBadge } from '@/features/deals/components/deal-stage';
+import { daysUntil, formatDateOnly, relativeDays } from './tx-bits';
+
+type EmptyState = { title: string; body: string; href: string; cta: string };
 
 export function TransactionsTable({
   result,
   filters,
   timezone,
+  basePath = '/transactions',
+  empty,
 }: {
   result: TransactionListResult;
   filters: TransactionFilters;
   timezone: string;
+  /** Where "Clear filters" goes (a deal-stage page passes its own URL). */
+  basePath?: string;
+  /** Copy for the unfiltered empty state. */
+  empty?: EmptyState;
 }) {
   if (result.rows.length === 0) {
-    const filtered = !!(filters.q || filters.agent || (filters.view && filters.view !== 'active'));
+    const filtered = !!(filters.q || filters.agent || (!filters.stage && filters.view && filters.view !== 'active'));
+    const e: EmptyState = filtered
+      ? { title: 'No deals match', body: 'Try another view or clear the filters.', href: basePath, cta: 'Clear filters' }
+      : empty ?? {
+          title: 'No active transactions',
+          body: 'When a buyer or seller goes under contract, open a transaction to track dates and documents.',
+          href: '/transactions/new',
+          cta: 'New transaction',
+        };
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
         <Handshake className="size-8 text-muted-foreground" aria-hidden />
-        <p className="font-medium">{filtered ? 'No transactions match' : 'No active transactions'}</p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          {filtered ? 'Try another view or clear the filters.' : 'When a buyer or seller goes under contract, open a transaction to track dates and documents.'}
-        </p>
-        <Link href={filtered ? '/transactions' : '/transactions/new'} className={buttonVariants({ variant: filtered ? 'outline' : 'default' })}>
-          {filtered ? 'Clear filters' : 'New transaction'}
-        </Link>
+        <p className="font-medium">{e.title}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">{e.body}</p>
+        <Link href={e.href} className={buttonVariants({ variant: filtered ? 'outline' : 'default' })}>{e.cta}</Link>
       </div>
     );
   }
@@ -39,7 +52,7 @@ export function TransactionsTable({
         <TableHeader>
           <TableRow>
             <TableHead className="pl-4">Property</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Stage</TableHead>
             <TableHead className="hidden md:table-cell">Buyer / Seller</TableHead>
             <TableHead className="hidden lg:table-cell">Price</TableHead>
             <TableHead className="hidden sm:table-cell">Agent</TableHead>
@@ -59,7 +72,7 @@ export function TransactionsTable({
                     {[t.property_city, t.property_state].filter(Boolean).join(', ')} · {TX_SIDE[t.side]}
                   </span>
                 </TableCell>
-                <TableCell><TxStatusBadge status={t.status} /></TableCell>
+                <TableCell><DealStageBadge stage={t.deal_stage} /></TableCell>
                 <TableCell className="hidden max-w-56 md:table-cell">
                   <span className="block truncate">{t.buyer_name ?? '—'}</span>
                   <span className="block truncate text-xs text-muted-foreground">{t.seller_name ?? '—'}</span>

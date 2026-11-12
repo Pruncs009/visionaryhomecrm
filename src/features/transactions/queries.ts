@@ -36,7 +36,11 @@ export async function listTransactions(
     .eq('organization_id', orgId)
     .range(from, from + TX_PAGE_SIZE - 1);
 
-  if (view === 'active') {
+  if (filters.stage) {
+    // Closed / dead: most recent first. Working stages: soonest closing first.
+    const done = filters.stage === 'closed' || filters.stage === 'dead';
+    query = query.eq('deal_stage', filters.stage).order('closing_date', { ascending: !done, nullsFirst: false });
+  } else if (view === 'active') {
     // Soonest closing first — that's what a transaction coordinator works from.
     query = query.in('status', ACTIVE_STATUSES).order('closing_date', { ascending: true, nullsFirst: false });
   } else {

@@ -6,7 +6,11 @@ import { requireContext } from '@/features/auth/guards';
 import type { ActionState } from '@/features/auth/types';
 import { createClient } from '@/lib/supabase/server';
 import type { TransactionStatus } from '@/types/database.types';
+import { z } from 'zod';
+import { DEAL_STAGE_VALUES } from '@/features/deals/constants';
 import { STORAGE_BUCKET } from './constants';
+
+const dealStageSchema = z.enum(DEAL_STAGE_VALUES);
 import { recordUploadSchema, transactionFormSchema, txStatusSchema, uuidSchema } from './schemas';
 
 export type MutationResult = { ok: true } | { ok: false; error: string };
@@ -37,10 +41,9 @@ function dbErrorMessage(error: { code?: string; message: string }) {
   return 'Something went wrong. Please try again.';
 }
 
-function revalidateTransactions(id?: string) {
-  revalidatePath('/transactions');
-  revalidatePath('/dashboard');
-  if (id) revalidatePath(`/transactions/${id}`);
+function revalidateTransactions(_id?: string) {
+  // Whole app: deal-stage pages and the sidebar counts depend on transactions too.
+  revalidatePath('/', 'layout');
 }
 
 // -----------------------------------------------------------------------------
@@ -85,6 +88,16 @@ export async function saveTransaction(_prev: ActionState, formData: FormData): P
   if (error) return { error: dbErrorMessage(error), values };
 
   const id = data as string;
+  // New deal opened from a deal-stage page → put it in that stage.
+  const stage = dealStageSchema.safeParse(formData.get('deal_stage'));
+  if (!d.transaction_id && stage.success && stage.data !== 'under_contract') {
+    const { error: stageError } = await supabase
+      .from('transactions')
+      .update({ deal_stage: stage.data })
+      .eq('organization_id', ctx.organization.id)
+      .eq('id', id);
+    if (stageError) console.error('[transactions] could not set deal stage', stageError);
+  }
   revalidateTransactions(id);
   redirect(`/transactions/${id}`);
 }

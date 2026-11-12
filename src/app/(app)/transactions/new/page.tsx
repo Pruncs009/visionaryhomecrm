@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { requireContext } from '@/features/auth/guards';
+import { DEAL_STAGE, DEAL_STAGE_VALUES, stageHref, type DealStage } from '@/features/deals/constants';
 import { getTeamMembers } from '@/features/leads/queries';
 import { TransactionForm } from '@/features/transactions/components/transaction-form';
 import { getTransactionFormOptions } from '@/features/transactions/queries';
@@ -17,19 +18,24 @@ export default async function NewTransactionPage({ searchParams }: PageProps) {
   ]);
   // Deep links like /transactions/new?buyer=<contactId> prefill a party.
   const known = (id?: string) => (id && options.contacts.some((c) => c.id === id) ? id : '');
+  // ?stage=under_dispo when started from a deal-stage page.
+  const stage = (DEAL_STAGE_VALUES as readonly string[]).includes(sp.stage ?? '') ? (sp.stage as DealStage) : null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">New transaction</h1>
-        <p className="text-sm text-muted-foreground">Open a deal when a buyer or seller goes under contract.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">New deal</h1>
+        <p className="text-sm text-muted-foreground">
+          {stage ? `Lands in ${DEAL_STAGE[stage].label}. You can move it to another stage any time.` : 'Open a deal when a buyer or seller goes under contract.'}
+        </p>
       </div>
       <TransactionForm
         contacts={options.contacts}
         properties={options.properties}
         members={members}
-        submitLabel="Create transaction"
-        cancelHref="/transactions"
+        submitLabel="Create deal"
+        cancelHref={stage ? stageHref(stage) : '/transactions'}
+        dealStage={stage ?? undefined}
         defaults={{
           side: 'buyer',
           status: 'under_contract',

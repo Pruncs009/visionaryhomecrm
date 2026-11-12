@@ -1,15 +1,21 @@
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { requireContext } from '@/features/auth/guards';
+import { getDealStageCounts } from '@/features/deals/queries';
 
 // Authenticated app shell. Middleware already redirects signed-out users;
 // this check is defense in depth (layouts must never assume middleware ran).
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireContext();
+  // Counts are a nice-to-have: never let them take the whole app down.
+  const counts = await getDealStageCounts(ctx.organization.id).catch((error) => {
+    console.error('[layout] deal stage counts failed', error);
+    return {};
+  });
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar counts={counts} />
       {/* min-w-0: let wide children (tables) scroll inside instead of widening the page */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar

@@ -16,7 +16,17 @@ const VIEWS = [
   ['all', 'All'],
 ] as const;
 
-export function TransactionFiltersBar({ filters, members }: { filters: TransactionFilters; members: TeamMember[] }) {
+export function TransactionFiltersBar({
+  filters,
+  members,
+  basePath = '/transactions',
+}: {
+  filters: TransactionFilters;
+  members: TeamMember[];
+  /** Deal-stage pages: search + agent only, no Active/Closed tabs. */
+  basePath?: string;
+}) {
+  const stagePage = basePath !== '/transactions';
   const view = filters.view ?? 'active';
   const href = (v: string) => {
     const p = new URLSearchParams();
@@ -29,20 +39,22 @@ export function TransactionFiltersBar({ filters, members }: { filters: Transacti
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <nav aria-label="Transaction views" className="flex gap-1 rounded-lg bg-muted p-1">
-        {VIEWS.map(([v, label]) => (
-          <Link
-            key={v}
-            href={href(v)}
-            aria-current={view === v ? 'page' : undefined}
-            className={cn('rounded-md px-3 py-1 text-sm font-medium', view === v ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground')}
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
-      <form method="get" action="/transactions" role="search" className="flex flex-wrap items-center gap-2">
-        {view !== 'active' && <input type="hidden" name="view" value={view} />}
+      {stagePage ? <span /> : (
+        <nav aria-label="Transaction views" className="flex gap-1 rounded-lg bg-muted p-1">
+          {VIEWS.map(([v, label]) => (
+            <Link
+              key={v}
+              href={href(v)}
+              aria-current={view === v ? 'page' : undefined}
+              className={cn('rounded-md px-3 py-1 text-sm font-medium', view === v ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      )}
+      <form method="get" action={basePath} role="search" className="flex flex-wrap items-center gap-2">
+        {!stagePage && view !== 'active' && <input type="hidden" name="view" value={view} />}
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input name="q" type="search" placeholder="Address, buyer, seller" aria-label="Search transactions" defaultValue={filters.q} className="w-56 pl-8" />

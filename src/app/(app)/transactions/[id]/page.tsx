@@ -17,7 +17,7 @@ import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
-import { DealHeaderField, DEAL_TYPE_SUGGESTIONS, EmdInSelect } from '@/features/deals/components/deal-header-field';
+import { DealHeaderField, DEAL_TYPE_SUGGESTIONS, EmdInSelect, EscrowTypeField } from '@/features/deals/components/deal-header-field';
 import { DeleteTransactionButton } from '@/features/transactions/components/tx-controls';
 import { getDealParties, getDealWorkspace, getPersonOptions, getTeamNameOptions, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
@@ -302,8 +302,8 @@ function DealDetailsPanel({ tx }: { tx: TransactionRow }) {
       <h2 id="deal-details-heading" className="mb-3 font-semibold">Deal details</h2>
       <div className="space-y-3">
         <DealHeaderField key={k('contingency_type')} id={tx.id} field="contingency_type" value={tx.contingency_type} placeholder="e.g. Inspection, Financing" />
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] gap-3">
-          <DealHeaderField key={k('escrow_type')} id={tx.id} field="escrow_type" value={tx.escrow_type} placeholder="e.g. Title, Attorney" />
+        <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)] items-start gap-3">
+          <EscrowTypeField key={k('escrow_type')} id={tx.id} value={tx.escrow_type} />
           <DealHeaderField key={k('escrow_number')} id={tx.id} field="escrow_number" value={tx.escrow_number} placeholder="#" />
         </div>
         <DealHeaderField key={k('occupancy_strategy')} id={tx.id} field="occupancy_strategy" value={tx.occupancy_strategy} placeholder="e.g. Vacant, Cash for keys" />

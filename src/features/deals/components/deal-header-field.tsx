@@ -143,3 +143,77 @@ export function EmdInSelect({ id, value }: { id: string; value: boolean | null }
     </div>
   );
 }
+
+export const ESCROW_COMPANIES = ['Chicago Title Company', 'WFG Title Company', 'USA National Title Company'] as const;
+const OTHERS = '__others__';
+
+/**
+ * Escrow type: pick one of the usual title companies, or "Others" and type the
+ * name. Saved as the company name (transactions.escrow_type).
+ */
+export function EscrowTypeField({ id, value }: { id: string; value: string | null }) {
+  const selectId = useId();
+  const inputId = useId();
+  const saved0 = value ?? '';
+  const preset = (ESCROW_COMPANIES as readonly string[]).find((c) => c.toLowerCase() === saved0.trim().toLowerCase());
+  const [saved, setSaved] = useState(saved0);
+  const [choice, setChoice] = useState(saved0 === '' ? '' : preset ?? OTHERS);
+  const [other, setOther] = useState(preset || saved0 === '' ? '' : saved0);
+  const [pending, start] = useTransition();
+
+  const save = (next: string, message: string, onFail?: () => void) => {
+    if (next.trim() === saved.trim()) return;
+    start(async () => {
+      const r = await updateDealHeaderField(id, 'escrow_type', next);
+      if (r.ok) {
+        setSaved(next.trim());
+        toast.success(message);
+      } else {
+        toast.error(r.error);
+        onFail?.();
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-1">
+      <label htmlFor={selectId} className="block text-xs text-muted-foreground">Escrow type</label>
+      <NativeSelect
+        id={selectId}
+        className="w-full"
+        value={choice}
+        disabled={pending}
+        onChange={(e) => {
+          const next = e.target.value;
+          const previous = choice;
+          setChoice(next);
+          if (next === OTHERS) return; // wait for the typed name
+          setOther('');
+          save(next, next ? `Escrow type: ${next}` : 'Escrow type cleared', () => setChoice(previous));
+        }}
+      >
+        <NativeSelectOption value="">—</NativeSelectOption>
+        {ESCROW_COMPANIES.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}
+        <NativeSelectOption value={OTHERS}>Others</NativeSelectOption>
+      </NativeSelect>
+      {choice === OTHERS && (
+        <>
+          <label htmlFor={inputId} className="sr-only">Escrow company name</label>
+          <Input
+            id={inputId}
+            value={other}
+            disabled={pending}
+            placeholder="Enter escrow company name"
+            autoComplete="off"
+            autoFocus={!other}
+            onChange={(e) => setOther(e.target.value)}
+            onBlur={() => other.trim() && save(other, `Escrow type: ${other.trim()}`)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}

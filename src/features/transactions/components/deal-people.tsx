@@ -50,10 +50,10 @@ export function DealPeople({ txId, addButton, canRemove, team, teamOptions, grou
         <h2 id="people-heading" className="font-semibold">People</h2>
         {addButton}
       </div>
-      <div className="space-y-4">
+      <div className="divide-y">
         {groups.map((g) => (
-          <div key={g.title}>
-            <h3 className="mb-2 text-xs font-bold tracking-wide text-blue-900 uppercase dark:text-blue-300">
+          <div key={g.title} className="py-3 first:pt-0 last:pb-0">
+            <h3 className="mb-2 text-xs font-bold tracking-wide text-foreground uppercase">
               {g.title} ({g.people.length})
             </h3>
             {g.people.length === 0 ? (

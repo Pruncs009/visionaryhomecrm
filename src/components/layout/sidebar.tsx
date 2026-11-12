@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -31,7 +32,9 @@ export function Sidebar({ counts }: { counts: Partial<Record<DealStage, number>>
 
   return (
     <aside className="hidden w-60 shrink-0 border-r p-4 md:block">
-      <div className="mb-6 px-3 font-semibold">VisionaryHomeCRM</div>
+      <Link href="/dashboard" className="mb-6 block px-3" aria-label="Visionary Home Offer — Dashboard">
+        <Image src="/logo.png" alt="Visionary Home Offer" width={319} height={180} priority className="h-auto w-44" />
+      </Link>
       <nav aria-label="Main" className="space-y-0.5">
         {mainNav.map((item, i) => {
           const Icon = ICONS[item.icon];

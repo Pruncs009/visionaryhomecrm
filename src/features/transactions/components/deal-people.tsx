@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Building2, ChevronDown, ExternalLink, Mail, MapPin, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FitText } from './fit-text';
 import type { TeamRole } from '../parties';
 import { EditPersonButton, RemovePersonButton, type EditTarget, type TeamNames } from './deal-people-actions';
 
@@ -64,12 +65,15 @@ export function DealPeople({ txId, addButton, canRemove, team, teamOptions, grou
                   <li key={p.key} className="group flex items-start gap-3">
                     <Initials name={p.name} />
                     <div className="min-w-0 flex-1 text-sm">
-                      <p className="text-xs text-muted-foreground">{p.role}</p>
+                      {/* Role and the edit / remove buttons share the top line so the name gets the full width. */}
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="min-w-0 truncate text-xs text-muted-foreground">{p.role}</p>
+                        <div className="-my-1 flex shrink-0 items-center">
+                          {p.edit && <EditPersonButton txId={txId} target={p.edit} label={p.name} canRemove={canRemove} team={team} teamOptions={teamOptions} />}
+                          {canRemove && p.remove && <RemovePersonButton txId={txId} target={p.remove} label={p.name} />}
+                        </div>
+                      </div>
                       <PersonName person={p} />
-                    </div>
-                    <div className="ml-auto flex shrink-0 items-center">
-                      {p.edit && <EditPersonButton txId={txId} target={p.edit} label={p.name} canRemove={canRemove} team={team} teamOptions={teamOptions} />}
-                      {canRemove && p.remove && <RemovePersonButton txId={txId} target={p.remove} label={p.name} />}
                     </div>
                   </li>
                 ))}
@@ -87,9 +91,13 @@ function PersonName({ person: p }: { person: PersonEntry }) {
   const hasDetails = !!(p.company || p.phone || p.email || p.address);
   return (
     <details className="group/details">
-      <summary className="cursor-pointer list-none rounded font-medium text-primary marker:hidden hover:underline [&::-webkit-details-marker]:hidden">
-        <span className="break-words">{p.name}</span>
-        <ChevronDown className="ml-0.5 inline-block size-4 align-[-3px] transition-transform group-open/details:rotate-180" aria-hidden />
+      {/* One line: long names shrink to fit the panel; very long ones end in "…" (full name on hover). */}
+      <summary
+        title={p.name}
+        className="flex cursor-pointer list-none items-center gap-0.5 rounded font-medium text-primary marker:hidden hover:underline [&::-webkit-details-marker]:hidden"
+      >
+        <FitText>{p.name}</FitText>
+        <ChevronDown className="size-4 shrink-0 transition-transform group-open/details:rotate-180" aria-hidden />
         <span className="sr-only">Show contact details</span>
       </summary>
       <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">

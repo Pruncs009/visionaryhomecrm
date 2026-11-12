@@ -291,6 +291,9 @@ function DatesPanel({ tx, timezone }: { tx: TransactionRow; timezone: string }) 
 // -----------------------------------------------------------------------------
 // Right column: deal details (free-text fields, saved as you type → Enter / click away)
 // -----------------------------------------------------------------------------
+/** Field names in the Deal details panel: dark blue, regular weight. */
+const detailLabel = 'font-normal text-blue-900 dark:text-blue-300';
+
 function DealDetailsPanel({ tx }: { tx: TransactionRow }) {
   const photos = tx.photos_link?.trim() ?? '';
   // Only http(s) links open; "drive.google.com/…" without the scheme gets https:// added.
@@ -301,19 +304,17 @@ function DealDetailsPanel({ tx }: { tx: TransactionRow }) {
     <section aria-labelledby="deal-details-heading" className="rounded-xl border bg-card p-4">
       <h2 id="deal-details-heading" className="mb-3 font-semibold">Deal details</h2>
       <div className="space-y-3">
-        <DealHeaderField key={k('contingency_type')} id={tx.id} field="contingency_type" value={tx.contingency_type} placeholder="e.g. Inspection, Financing" />
-        <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)] items-start gap-3">
-          <EscrowTypeField key={k('escrow_type')} id={tx.id} value={tx.escrow_type} />
-          <DealHeaderField key={k('escrow_number')} id={tx.id} field="escrow_number" value={tx.escrow_number} placeholder="#" />
-        </div>
-        <DealHeaderField key={k('occupancy_strategy')} id={tx.id} field="occupancy_strategy" value={tx.occupancy_strategy} placeholder="e.g. Vacant, Cash for keys" />
-        <DealHeaderField key={k('lockbox_code')} id={tx.id} field="lockbox_code" value={tx.lockbox_code} placeholder="Code" />
+        <DealHeaderField key={k('contingency_type')} id={tx.id} field="contingency_type" value={tx.contingency_type} placeholder="e.g. Inspection, Financing" multiline labelClassName={detailLabel} />
+        <EscrowTypeField key={k('escrow_type')} id={tx.id} value={tx.escrow_type} labelClassName={detailLabel} />
+        <DealHeaderField key={k('escrow_number')} id={tx.id} field="escrow_number" value={tx.escrow_number} placeholder="#" multiline labelClassName={detailLabel} />
+        <DealHeaderField key={k('occupancy_strategy')} id={tx.id} field="occupancy_strategy" value={tx.occupancy_strategy} placeholder="e.g. Vacant, Cash for keys" multiline labelClassName={detailLabel} />
+        <DealHeaderField key={k('lockbox_code')} id={tx.id} field="lockbox_code" value={tx.lockbox_code} placeholder="Code" multiline labelClassName={detailLabel} />
         <div className="grid grid-cols-2 gap-3">
-          <DealHeaderField key={k('arv_estimate')} id={tx.id} field="arv_estimate" value={tx.arv_estimate} />
-          <DealHeaderField key={k('rehab_estimate')} id={tx.id} field="rehab_estimate" value={tx.rehab_estimate} />
+          <DealHeaderField key={k('arv_estimate')} id={tx.id} field="arv_estimate" value={tx.arv_estimate} labelClassName={detailLabel} />
+          <DealHeaderField key={k('rehab_estimate')} id={tx.id} field="rehab_estimate" value={tx.rehab_estimate} labelClassName={detailLabel} />
         </div>
         <div className="space-y-1">
-          <DealHeaderField key={k('photos_link')} id={tx.id} field="photos_link" value={tx.photos_link} placeholder="Paste a link" />
+          <DealHeaderField key={k('photos_link')} id={tx.id} field="photos_link" value={tx.photos_link} placeholder="Paste a link" multiline inputClassName="break-all" labelClassName={detailLabel} />
           {photosHref && (
             <a href={photosHref} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
               <ExternalLink className="size-3" aria-hidden /> Open photos

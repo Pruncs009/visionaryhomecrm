@@ -14,6 +14,7 @@ const LABEL: Record<DealHeaderField, string> = {
   purchase_price: 'Purchase price',
   lead_manager: 'Lead Manager',
   acquisition_manager: 'Acquisition Manager',
+  transaction_coordinator: 'Transaction coordinator',
 };
 
 const formatMoney = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;

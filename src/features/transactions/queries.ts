@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { FileCategory } from '@/types/database.types';
 import { ACTIVE_STATUSES, TX_PAGE_SIZE } from './constants';
-import { formatAddress, PARTY_ROLE_ORDER, type DealParty, type PartyRole, type PersonOption } from './parties';
+import { formatAddress, PARTY_GROUPS, PARTY_ROLE_ORDER, roleGroup, TEAM_ROLES, type DealParty, type PartyGroup, type PartyRole, type PersonOption, type TeamRole } from './parties';
 import type { TransactionFilters } from './schemas';
 import type { DealTask, DealWorkspace, Option, TransactionFile, TransactionListResult, TransactionRow } from './types';
 
@@ -22,6 +22,7 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     acquisition_manager: (r.acquisition_manager as string | null) ?? null,
     emd_due_date: (r.emd_due_date as string | null) ?? null,
     contingency_end_date: (r.contingency_end_date as string | null) ?? null,
+    transaction_coordinator: (r.transaction_coordinator as string | null) ?? null,
   };
 }
 
@@ -251,31 +252,84 @@ export async function getDealParties(orgId: string, transactionId: string): Prom
         phone: c.phone,
         company: c.company,
         address: formatAddress({ addressLine1: c.address_line1, city: c.city, state: c.state, postalCode: c.postal_code }),
+        addressLine1: c.address_line1,
+        city: c.city,
+        state: c.state,
+        postalCode: c.postal_code,
       };
     })
     .sort((a, b) => PARTY_ROLE_ORDER.indexOf(a.role) - PARTY_ROLE_ORDER.indexOf(b.role));
 }
 
-/** Saved contacts offered when adding someone to a deal. Capped at 1000. */
+/**
+ * Saved buyers, sellers, agents and title companies offered when adding someone
+ * to a deal, each with the departments it belongs to. Contacts outside those
+ * departments (e.g. plain leads) aren't offered. Capped at 1000.
+ */
 export async function getPersonOptions(orgId: string): Promise<PersonOption[]> {
   const supabase = await createClient();
+  const [contacts, links] = await Promise.all([
+    supabase
+      .from('contacts')
+      .select('id, full_name, email, phone, company, address_line1, city, state, postal_code, tags')
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .order('full_name', { ascending: true })
+      .limit(1000),
+    supabase.from('deal_parties').select('contact_id, role').eq('organization_id', orgId).limit(5000),
+  ]);
+  if (contacts.error) throw new Error(contacts.error.message);
+  if (links.error) throw new Error(links.error.message);
+
+  const groupsById = new Map<string, Set<PartyGroup>>();
+  const addGroup = (id: string, g: PartyGroup) => {
+    const set = groupsById.get(id) ?? new Set<PartyGroup>();
+    set.add(g);
+    groupsById.set(id, set);
+  };
+  for (const l of (links.data ?? []) as { contact_id: string; role: PartyRole }[]) addGroup(l.contact_id, roleGroup(l.role));
+  const byTag = new Map(PARTY_GROUPS.map((g) => [g.toLowerCase(), g]));
+
+  return ((contacts.data ?? []) as Record<string, unknown>[])
+    .map((c) => {
+      const id = c.id as string;
+      for (const t of (c.tags as string[] | null) ?? []) {
+        const g = byTag.get(t.trim().toLowerCase());
+        if (g) addGroup(id, g);
+      }
+      const s = (k: string) => (c[k] as string | null) ?? null;
+      return {
+        id,
+        name: s('full_name') ?? '',
+        groups: [...(groupsById.get(id) ?? [])],
+        email: s('email'),
+        phone: s('phone'),
+        company: s('company'),
+        addressLine1: s('address_line1'),
+        city: s('city'),
+        state: s('state'),
+        postalCode: s('postal_code'),
+      };
+    })
+    .filter((p) => p.groups.length > 0);
+}
+
+/** Names already used for each team role across the organization's deals (for suggestions). */
+export async function getTeamNameOptions(orgId: string): Promise<Record<TeamRole, string[]>> {
+  const supabase = await createClient();
   const { data, error } = await supabase
-    .from('contacts')
-    .select('id, full_name, email, phone, company, address_line1, city, state, postal_code')
+    .from('transactions')
+    .select('lead_manager, acquisition_manager, transaction_coordinator')
     .eq('organization_id', orgId)
     .is('deleted_at', null)
-    .order('full_name', { ascending: true })
-    .limit(1000);
+    .limit(5000);
   if (error) throw new Error(error.message);
-  return ((data ?? []) as Record<string, string | null>[]).map((c) => ({
-    id: c.id!,
-    name: c.full_name ?? '',
-    email: c.email,
-    phone: c.phone,
-    company: c.company,
-    addressLine1: c.address_line1,
-    city: c.city,
-    state: c.state,
-    postalCode: c.postal_code,
-  }));
+  const out = Object.fromEntries(TEAM_ROLES.map((r) => [r, new Set<string>()])) as Record<TeamRole, Set<string>>;
+  for (const row of (data ?? []) as Record<string, string | null>[]) {
+    for (const r of TEAM_ROLES) {
+      const v = row[r]?.trim();
+      if (v) out[r].add(v);
+    }
+  }
+  return Object.fromEntries(TEAM_ROLES.map((r) => [r, [...out[r]].sort((a, b) => a.localeCompare(b))])) as Record<TeamRole, string[]>;
 }

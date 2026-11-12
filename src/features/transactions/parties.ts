@@ -27,9 +27,32 @@ export const PARTY_ROLE_ORDER: PartyRole[] = [
 ];
 
 export const isClientRole = (r: string): r is ClientRole => (CLIENT_ROLES as readonly string[]).includes(r);
+/**
+ * The "department" a role belongs to. A saved contact is offered only for roles in
+ * its own group (a seller never shows up when adding a title company, etc.).
+ * It's also the tag the contact gets in Contacts.
+ */
+export type PartyGroup = 'Buyer' | 'Seller' | 'Buyer agent' | 'Seller agent' | 'Title company';
+export const roleGroup = (r: PartyRole): PartyGroup =>
+  r === 'buyer_agent' ? 'Buyer agent'
+  : r === 'seller_agent' ? 'Seller agent'
+  : r === 'title_company' ? 'Title company'
+  : r.startsWith('buyer') ? 'Buyer'
+  : 'Seller';
+export const PARTY_GROUPS: PartyGroup[] = ['Buyer', 'Seller', 'Buyer agent', 'Seller agent', 'Title company'];
+
 /** Roles that hold one person per deal: every client slot, plus the title company. */
 export const isSingleSlotRole = (r: string): boolean =>
   isClientRole(r) || (SINGLE_COLLABORATOR_ROLES as readonly string[]).includes(r);
+
+/** Team members: plain names stored on the deal (transactions.*). */
+export const TEAM_ROLES = ['transaction_coordinator', 'acquisition_manager', 'lead_manager'] as const;
+export type TeamRole = (typeof TEAM_ROLES)[number];
+export const TEAM_ROLE_LABEL: Record<TeamRole, string> = {
+  transaction_coordinator: 'Transaction coordinator',
+  acquisition_manager: 'Acquisition Manager',
+  lead_manager: 'Lead Manager',
+};
 
 export type DealParty = {
   id: string;
@@ -40,12 +63,18 @@ export type DealParty = {
   phone: string | null;
   company: string | null;
   address: string | null;
+  addressLine1: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
 };
 
 /** A saved contact offered when adding someone, so people can be reused across deals. */
 export type PersonOption = {
   id: string;
   name: string;
+  /** Departments this contact belongs to (from its tags and the deals it's on). */
+  groups: PartyGroup[];
   email: string | null;
   phone: string | null;
   company: string | null;

@@ -42,6 +42,7 @@ export type TransactionRow = {
   acquisition_manager: string | null;
   emd_due_date: string | null;
   contingency_end_date: string | null;
+  transaction_coordinator: string | null;
 };
 
 export type TransactionListResult = {

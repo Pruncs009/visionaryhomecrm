@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Building2, Mail, MapPin, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { RemovePersonButton } from './deal-people-actions';
+import type { TeamRole } from '../parties';
+import { EditPersonButton, RemovePersonButton, type EditTarget, type TeamNames } from './deal-people-actions';
 
 export function Initials({ name, size = 'md', title }: { name: string; size?: 'sm' | 'md'; title?: string }) {
   const letters = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || '?';
@@ -28,15 +29,19 @@ export type PersonEntry = {
   phone?: string | null;
   company?: string | null;
   address?: string | null;
-  /** Added from the People panel: can be removed there. */
-  partyId?: string;
+  /** What the pencil edits (omitted: read-only). */
+  edit?: EditTarget;
+  /** What the × removes (omitted: can't be removed from the panel). */
+  remove?: { kind: 'party'; partyId: string } | { kind: 'team'; role: TeamRole };
 };
 
 /** Left column: clients and team on this deal. */
-export function DealPeople({ txId, addButton, canRemove, groups }: {
+export function DealPeople({ txId, addButton, canRemove, team, teamOptions, groups }: {
   txId: string;
   addButton: React.ReactNode;
   canRemove: boolean;
+  team: TeamNames;
+  teamOptions: Record<TeamRole, string[]>;
   groups: { title: string; people: PersonEntry[] }[];
 }) {
   return (
@@ -74,7 +79,10 @@ export function DealPeople({ txId, addButton, canRemove, groups }: {
                         </div>
                       )}
                     </div>
-                    {canRemove && p.partyId && <RemovePersonButton txId={txId} partyId={p.partyId} label={p.name} />}
+                    <div className="ml-auto flex shrink-0 items-center">
+                      {p.edit && <EditPersonButton txId={txId} target={p.edit} label={p.name} canRemove={canRemove} team={team} teamOptions={teamOptions} />}
+                      {canRemove && p.remove && <RemovePersonButton txId={txId} target={p.remove} label={p.name} />}
+                    </div>
                   </li>
                 ))}
               </ul>

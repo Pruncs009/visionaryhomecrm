@@ -45,6 +45,7 @@ const HEADER_FIELDS = {
   deal_type: text(100),
   lead_manager: text(200),
   acquisition_manager: text(200),
+  transaction_coordinator: text(200),
   purchase_price: z
     .string()
     .trim()

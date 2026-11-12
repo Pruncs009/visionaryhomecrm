@@ -17,7 +17,7 @@ import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
-import { DealHeaderField, DEAL_TYPE_SUGGESTIONS } from '@/features/deals/components/deal-header-field';
+import { DealHeaderField, DEAL_TYPE_SUGGESTIONS, EmdInSelect } from '@/features/deals/components/deal-header-field';
 import { DeleteTransactionButton } from '@/features/transactions/components/tx-controls';
 import { getDealParties, getDealWorkspace, getPersonOptions, getTeamNameOptions, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
@@ -157,7 +157,14 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         </div>
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 xl:w-[30rem] xl:shrink-0">
-          <DealHeaderField id={tx.id} field="purchase_price" value={tx.purchase_price} inputClassName="h-9 text-lg font-semibold md:text-lg" />
+          <div className="space-y-3">
+            <DealHeaderField id={tx.id} field="purchase_price" value={tx.purchase_price} inputClassName="h-9 text-lg font-semibold md:text-lg" />
+            {/* EMD amount (transactions.earnest_money) with "IN" = is the deposit in? */}
+            <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-3">
+              <DealHeaderField key={`emd-${tx.earnest_money ?? ''}`} id={tx.id} field="earnest_money" value={tx.earnest_money} />
+              <EmdInSelect key={`emd-in-${tx.emd_in}`} id={tx.id} value={tx.emd_in} />
+            </div>
+          </div>
           <div className="space-y-3 sm:row-span-2">
             <DealHeaderField key={`lm-${tx.lead_manager ?? ""}`} id={tx.id} field="lead_manager" value={tx.lead_manager} placeholder="Name" />
             <DealHeaderField key={`am-${tx.acquisition_manager ?? ""}`} id={tx.id} field="acquisition_manager" value={tx.acquisition_manager} placeholder="Name" />

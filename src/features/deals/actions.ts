@@ -40,18 +40,20 @@ export async function updateDealStage(id: string, stage: string): Promise<{ ok: 
 // Inline-editable header fields on the deal page
 // -----------------------------------------------------------------------------
 const text = (max: number) => z.string().trim().max(max, `Keep it under ${max} characters.`).transform((s) => s || null);
+const money = z
+  .string()
+  .trim()
+  .transform((s) => s.replace(/[$,\s]/g, ''))
+  .refine((s) => s === '' || (/^\d+(\.\d{1,2})?$/.test(s) && Number(s) < 1e12), 'Enter a dollar amount, e.g. 250000.')
+  .transform((s) => (s === '' ? null : Number(s)));
 const HEADER_FIELDS = {
   campaign_name: text(200),
   deal_type: text(100),
   lead_manager: text(200),
   acquisition_manager: text(200),
   transaction_coordinator: text(200),
-  purchase_price: z
-    .string()
-    .trim()
-    .transform((s) => s.replace(/[$,\s]/g, ''))
-    .refine((s) => s === '' || (/^\d+(\.\d{1,2})?$/.test(s) && Number(s) < 1e12), 'Enter a dollar amount, e.g. 250000.')
-    .transform((s) => (s === '' ? null : Number(s))),
+  purchase_price: money,
+  earnest_money: money,
 } as const;
 export type DealHeaderField = keyof typeof HEADER_FIELDS;
 
@@ -82,4 +84,25 @@ export async function updateDealHeaderField(
 
   revalidatePath(`/transactions/${id}`);
   return { ok: true, value: parsed.data };
+}
+
+/** "IN" next to the EMD on the deal header: is the earnest money deposit in? */
+export async function updateEmdIn(id: string, value: 'yes' | 'no' | ''): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await requireContext();
+  if (!z.string().uuid().safeParse(id).success || !['yes', 'no', ''].includes(value)) return { ok: false, error: 'Invalid value.' };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ emd_in: value === '' ? null : value === 'yes' })
+    .eq('organization_id', ctx.organization.id)
+    .eq('id', id)
+    .is('deleted_at', null)
+    .select('id');
+  if (error) {
+    console.error('[deals] emd_in update failed', error);
+    return { ok: false, error: error.code === '42501' ? "You don't have permission to do that." : 'Something went wrong. Please try again.' };
+  }
+  if (!data?.length) return { ok: false, error: 'This deal no longer exists.' };
+  revalidatePath(`/transactions/${id}`);
+  return { ok: true };
 }

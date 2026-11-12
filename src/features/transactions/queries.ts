@@ -23,6 +23,7 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     emd_due_date: (r.emd_due_date as string | null) ?? null,
     contingency_end_date: (r.contingency_end_date as string | null) ?? null,
     transaction_coordinator: (r.transaction_coordinator as string | null) ?? null,
+    emd_in: typeof r.emd_in === 'boolean' ? r.emd_in : null,
   };
 }
 

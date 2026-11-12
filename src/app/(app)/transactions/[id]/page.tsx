@@ -12,7 +12,7 @@ import { DealNotes } from '@/features/transactions/components/deal-notes';
 import { EditDatesButton } from '@/features/transactions/components/deal-dates-dialog';
 import { DealPeople, type PersonEntry } from '@/features/transactions/components/deal-people';
 import { AddPersonMenu } from '@/features/transactions/components/deal-people-actions';
-import { isClientRole, PARTY_ROLE_LABEL, type DealParty, type PartyRole } from '@/features/transactions/parties';
+import { isClientRole, isSingleSlotRole, PARTY_ROLE_LABEL, type DealParty, type PartyRole } from '@/features/transactions/parties';
 import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
@@ -80,7 +80,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
     ...clientParties.filter((p) => p.role.startsWith('seller')).map(partyEntry),
   ];
   const takenRoles: PartyRole[] = [
-    ...clientParties.map((p) => p.role),
+    ...parties.filter((p) => isSingleSlotRole(p.role)).map((p) => p.role),
     ...(tx.buyer_name ? (['buyer'] as const) : []),
     ...(tx.seller_name ? (['seller'] as const) : []),
   ];

@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireContext } from '@/features/auth/guards';
 import { createClient } from '@/lib/supabase/server';
-import { isClientRole, PARTY_ROLE_LABEL, PARTY_ROLES } from './parties';
+import { isClientRole, isSingleSlotRole, PARTY_ROLE_LABEL, PARTY_ROLES } from './parties';
 
 export type PartyResult = { ok: true } | { ok: false; error?: string; fieldErrors?: Record<string, string[] | undefined> };
 
@@ -54,9 +54,9 @@ export async function addDealParty(input: AddPartyInput): Promise<PartyResult> {
   if (txError) return { ok: false, error: dbError(txError) };
   if (!tx) return { ok: false, error: 'This deal no longer exists.' };
 
-  // Client slots hold one person each. The primary buyer / seller may already be
-  // set from the deal form (transactions.buyer_name / seller_name).
-  if (isClientRole(d.role)) {
+  // Client slots (and the title company) hold one person each. The primary buyer /
+  // seller may already be set from the deal form (transactions.buyer_name / seller_name).
+  if (isSingleSlotRole(d.role)) {
     const { count } = await supabase
       .from('deal_parties')
       .select('id', { count: 'exact', head: true })
@@ -119,7 +119,7 @@ export async function addDealParty(input: AddPartyInput): Promise<PartyResult> {
     .insert({ organization_id: org, transaction_id: d.txId, contact_id: contactId, role: d.role });
   if (linkError) {
     if (linkError.code === '23505') {
-      return { ok: false, fieldErrors: isClientRole(d.role) ? { role: [`${label} is already on this deal.`] } : { fullName: ['This person is already on the deal in that role.'] } };
+      return { ok: false, fieldErrors: isSingleSlotRole(d.role) ? { role: [`${label} is already on this deal.`] } : { fullName: ['This person is already on the deal in that role.'] } };
     }
     return { ok: false, error: dbError(linkError) };
   }

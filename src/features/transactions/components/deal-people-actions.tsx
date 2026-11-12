@@ -60,6 +60,7 @@ function AddPersonForm({ kind, txId, takenRoles, people, onDone }: {
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const isCollab = kind === 'collaborator';
+  const isTitle = role === 'title_company';
   const roles = isCollab ? COLLABORATOR_ROLES : CLIENT_ROLES;
 
   // A typed name that matches a saved contact reuses that contact.
@@ -123,7 +124,7 @@ function AddPersonForm({ kind, txId, takenRoles, people, onDone }: {
         <div>
           <DialogPrimitive.Title className="text-base font-semibold">{isCollab ? 'Add collaborator' : 'Add client'}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="text-sm text-muted-foreground">
-            {isCollab ? 'A seller or buyer agent on this deal.' : 'A buyer or seller on this deal.'} They’re saved to Contacts for next time.
+            {isCollab ? 'A seller agent, buyer agent or title company on this deal.' : 'A buyer or seller on this deal.'} They’re saved to Contacts for next time.
           </DialogPrimitive.Description>
         </div>
         <DialogPrimitive.Close aria-label="Close" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"><X className="size-4" /></DialogPrimitive.Close>
@@ -136,7 +137,7 @@ function AddPersonForm({ kind, txId, takenRoles, people, onDone }: {
         <NativeSelect id={`${uid}-role`} className="w-full" value={role} onChange={(e) => { setRole(e.target.value as PartyRole); setErrors({}); }} aria-invalid={!!errors.role?.[0]}>
           <NativeSelectOption value="" disabled>Select…</NativeSelectOption>
           {roles.map((r) => {
-            const taken = !isCollab && takenRoles.includes(r);
+            const taken = takenRoles.includes(r);
             return <NativeSelectOption key={r} value={r} disabled={taken}>{PARTY_ROLE_LABEL[r]}{taken ? ' (already added)' : ''}</NativeSelectOption>;
           })}
         </NativeSelect>
@@ -146,7 +147,7 @@ function AddPersonForm({ kind, txId, takenRoles, people, onDone }: {
       {role && (
         <>
           <div className="space-y-1">
-            {field('fullName', 'Full name', { list: `${uid}-people`, placeholder: 'Type a name or pick a saved contact', autoFocus: true })}
+            {field('fullName', isTitle ? 'Contact full name' : 'Full name', { list: `${uid}-people`, placeholder: 'Type a name or pick a saved contact', autoFocus: true })}
             <datalist id={`${uid}-people`}>
               {people.map((p) => <option key={p.id} value={p.name} label={[p.company, p.email ?? p.phone].filter(Boolean).join(' · ') || undefined} />)}
             </datalist>
@@ -159,7 +160,7 @@ function AddPersonForm({ kind, txId, takenRoles, people, onDone }: {
             <div className="grid gap-4 sm:grid-cols-2">
               {field('phone', 'Phone number', { type: 'tel', inputMode: 'tel' })}
               {field('email', 'Email address', { type: 'email', inputMode: 'email' })}
-              <div className="sm:col-span-2">{field('company', 'Brokerage firm')}</div>
+              <div className="sm:col-span-2">{field('company', isTitle ? 'Title company name' : 'Brokerage firm')}</div>
               <div className="sm:col-span-2">{field('addressLine1', 'Street address')}</div>
               {field('city', 'City')}
               <div className="grid grid-cols-2 gap-4">

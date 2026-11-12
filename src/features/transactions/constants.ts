@@ -20,10 +20,7 @@ export const TX_SIDE: Record<TransactionSide, string> = {
 
 /** Key dates shown on the timeline, in deal order. */
 export const KEY_DATES = [
-  { key: 'contract_date', label: 'Contract signed' },
-  { key: 'inspection_deadline', label: 'Inspection deadline' },
-  { key: 'appraisal_deadline', label: 'Appraisal deadline' },
-  { key: 'financing_deadline', label: 'Financing deadline' },
+  { key: 'contract_date', label: 'Ratified date' },
   { key: 'closing_date', label: 'Closing' },
 ] as const;
 export type KeyDateKey = (typeof KEY_DATES)[number]['key'];

@@ -17,7 +17,8 @@ export type MutationResult = { ok: true } | { ok: false; error: string };
 
 const FIELDS = [
   'transaction_id', 'name', 'side', 'status', 'property_mode', 'property_id', 'new_address_line1', 'new_city',
-  'new_state', 'new_postal_code', 'list_price', 'buyer_contact_id', 'seller_contact_id', 'agent_id', 'offer_price',
+  'new_state', 'new_postal_code', 'list_price', 'buyer_contact_id', 'seller_contact_id', 'buyer_name', 'seller_name',
+  'purchase_price', 'agent_id', 'offer_price',
   'sale_price', 'earnest_money', 'commission_rate', 'commission_amount', 'contract_date', 'inspection_deadline',
   'appraisal_deadline', 'financing_deadline', 'closing_date',
 ] as const;
@@ -32,7 +33,7 @@ function readForm(formData: FormData) {
 }
 
 function dbErrorMessage(error: { code?: string; message: string }) {
-  if (error.code === '23514' && error.message.includes('closing_after_contract')) return 'Closing must be on or after the contract date.';
+  if (error.code === '23514' && error.message.includes('closing_after_contract')) return 'Closing must be on or after the ratified date.';
   if (error.code === '23503' && error.message.includes('agent')) return "That agent isn't on your team anymore.";
   if (error.code === '23503') return "One of the selected people or properties isn't in your organization.";
   if (error.code === 'P0002') return 'This transaction no longer exists.';
@@ -88,15 +89,23 @@ export async function saveTransaction(_prev: ActionState, formData: FormData): P
   if (error) return { error: dbErrorMessage(error), values };
 
   const id = data as string;
-  // New deal opened from a deal-stage page → put it in that stage.
+  // Columns save_transaction() doesn't know about (migrations 11-12), plus the
+  // deal stage for a new deal opened from a deal-stage page.
   const stage = dealStageSchema.safeParse(formData.get('deal_stage'));
-  if (!d.transaction_id && stage.success && stage.data !== 'under_contract') {
-    const { error: stageError } = await supabase
-      .from('transactions')
-      .update({ deal_stage: stage.data })
-      .eq('organization_id', ctx.organization.id)
-      .eq('id', id);
-    if (stageError) console.error('[transactions] could not set deal stage', stageError);
+  const { error: extraError } = await supabase
+    .from('transactions')
+    .update({
+      buyer_name: d.buyer_name,
+      seller_name: d.seller_name,
+      purchase_price: d.purchase_price,
+      ...(!d.transaction_id && stage.success && stage.data !== 'under_contract' ? { deal_stage: stage.data } : {}),
+    })
+    .eq('organization_id', ctx.organization.id)
+    .eq('id', id);
+  if (extraError) {
+    // The deal itself is saved; report instead of losing the user's input.
+    console.error('[transactions] could not save buyer/seller/purchase price', extraError);
+    return { error: dbErrorMessage(extraError), values: { ...values, transaction_id: id } };
   }
   revalidateTransactions(id);
   redirect(`/transactions/${id}`);

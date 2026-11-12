@@ -55,7 +55,10 @@ export const transactionFormSchema = z
     list_price: money,
     buyer_contact_id: optionalUuid,
     seller_contact_id: optionalUuid,
+    buyer_name: z.string().trim().max(200, 'Keep it under 200 characters').optional().transform((v) => v || null),
+    seller_name: z.string().trim().max(200, 'Keep it under 200 characters').optional().transform((v) => v || null),
     agent_id: optionalUuid,
+    purchase_price: money,
     offer_price: money,
     sale_price: money,
     earnest_money: money,
@@ -75,7 +78,7 @@ export const transactionFormSchema = z
       ctx.addIssue({ code: 'custom', path: ['new_address_line1'], message: 'Enter the street address' });
     }
     if (d.contract_date && d.closing_date && d.closing_date < d.contract_date) {
-      ctx.addIssue({ code: 'custom', path: ['closing_date'], message: 'Closing must be on or after the contract date' });
+      ctx.addIssue({ code: 'custom', path: ['closing_date'], message: 'Closing must be on or after the ratified date' });
     }
     if (d.buyer_contact_id && d.buyer_contact_id === d.seller_contact_id) {
       ctx.addIssue({ code: 'custom', path: ['seller_contact_id'], message: 'Buyer and seller must be different people' });

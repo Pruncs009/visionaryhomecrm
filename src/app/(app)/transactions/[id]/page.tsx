@@ -281,7 +281,7 @@ type TimelineEvent = { at: string; icon: React.ElementType; text: string; tone?:
 function Timeline({ tx, ws, files, timezone }: { tx: TransactionRow; ws: DealWorkspace; files: TransactionFile[]; timezone: string }) {
   const events: TimelineEvent[] = [
     { at: tx.created_at, icon: Sparkles, text: 'Deal created' },
-    ...(tx.contract_date ? [{ at: `${tx.contract_date}T12:00:00Z`, icon: Flag, text: 'Contract signed', tone: 'primary' as const }] : []),
+    ...(tx.contract_date ? [{ at: `${tx.contract_date}T12:00:00Z`, icon: Flag, text: 'Contract ratified', tone: 'primary' as const }] : []),
     ...(tx.closed_at ? [{ at: tx.closed_at, icon: CalendarCheck, text: 'Deal closed', tone: 'success' as const }] : []),
     ...ws.tasks.filter((t) => t.done && t.completedAt).map((t) => ({ at: t.completedAt!, icon: CircleCheck, text: `Task completed: ${t.title}` })),
     ...ws.notes.map((n) => ({ at: n.createdAt, icon: StickyNote, text: `${n.authorName ?? 'Someone'} added a note: ${n.body.length > 120 ? `${n.body.slice(0, 120)}…` : n.body}` })),

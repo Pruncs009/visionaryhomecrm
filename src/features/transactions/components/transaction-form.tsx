@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { FormField, FormMessage } from '@/features/auth/components/form-field';
 import type { TeamMember } from '@/features/leads/types';
@@ -12,6 +13,37 @@ import { KEY_DATES, TX_SIDE, TX_SIDE_VALUES, TX_STATUS, TX_STATUS_VALUES } from 
 import type { Option } from '../types';
 
 type Defaults = Partial<Record<string, string>>;
+
+/** Removed from the form but still stored; sent back as-is. */
+const HIDDEN_KEPT = [
+  'offer_price', 'sale_price', 'commission_rate', 'commission_amount',
+  'inspection_deadline', 'appraisal_deadline', 'financing_deadline',
+] as const;
+
+/**
+ * Free-text buyer / seller name. A deal may still be linked to a contact from
+ * before; the link is kept only while the name is left as that contact's name.
+ */
+function PartyName({ role, label, defaultName, linkedId, errors }: {
+  role: 'buyer' | 'seller';
+  label: string;
+  defaultName?: string;
+  linkedId?: string;
+  errors?: string[];
+}) {
+  const initial = defaultName ?? '';
+  const [name, setName] = useState(initial);
+  const keepLink = !!linkedId && name.trim() === initial.trim();
+  const id = `${role}_name`;
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium">{label}</label>
+      <Input id={id} name={id} value={name} onChange={(ev) => setName(ev.target.value)} placeholder="Full name" autoComplete="off" aria-invalid={!!errors?.[0]} />
+      <input type="hidden" name={`${role}_contact_id`} value={keepLink ? linkedId : ''} />
+      {errors?.[0] && <p className="text-sm text-destructive">{errors[0]}</p>}
+    </div>
+  );
+}
 
 export function TransactionForm({
   defaults,
@@ -53,7 +85,6 @@ export function TransactionForm({
       {e[name]?.[0] && <p className="text-sm text-destructive">{e[name]![0]}</p>}
     </div>
   );
-  const contactOptions: Array<[string, string]> = [['', '— None —'], ...contacts.map((c) => [c.id, c.detail ? `${c.label} (${c.detail})` : c.label] as [string, string])];
 
   return (
     <form action={formAction} noValidate className="space-y-6">
@@ -100,8 +131,8 @@ export function TransactionForm({
               </div>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
-              {select('buyer_contact_id', 'Buyer', contactOptions)}
-              {select('seller_contact_id', 'Seller', contactOptions)}
+              <PartyName role="buyer" label="Buyer" defaultName={v.buyer_name} linkedId={v.buyer_contact_id} errors={e.buyer_name} />
+              <PartyName role="seller" label="Seller" defaultName={v.seller_name} linkedId={v.seller_contact_id} errors={e.seller_name} />
               {select('agent_id', 'Assigned agent', [['', 'Unassigned'], ...members.map((m) => [m.userId, m.name] as [string, string])])}
               {select('side', 'We represent', TX_SIDE_VALUES.map((s) => [s, TX_SIDE[s]]))}
               {select('status', 'Status', TX_STATUS_VALUES.map((s) => [s, TX_STATUS[s].label]))}
@@ -114,7 +145,7 @@ export function TransactionForm({
           <Card>
             <CardHeader>
               <CardTitle>Key dates</CardTitle>
-              <CardDescription>Contingency deadlines drive the countdown on the deal page.</CardDescription>
+              <CardDescription>The next date drives the countdown on the deal page.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               {KEY_DATES.map((k) => (
@@ -125,13 +156,12 @@ export function TransactionForm({
           <Card>
             <CardHeader><CardTitle>Financials</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <FormField name="offer_price" label="Offer price" inputMode="numeric" placeholder="$" defaultValue={v.offer_price} errors={e.offer_price} />
-              <FormField name="sale_price" label="Final sale price" inputMode="numeric" placeholder="$" defaultValue={v.sale_price} errors={e.sale_price} />
-              <FormField name="earnest_money" label="Earnest money" inputMode="numeric" placeholder="$" defaultValue={v.earnest_money} errors={e.earnest_money} />
-              <FormField name="commission_rate" label="Commission %" inputMode="decimal" placeholder="e.g. 3" defaultValue={v.commission_rate} errors={e.commission_rate} />
-              <FormField name="commission_amount" label="Commission $ (overrides %)" inputMode="numeric" placeholder="$" defaultValue={v.commission_amount} errors={e.commission_amount} />
+              <FormField name="purchase_price" label="Purchase price" inputMode="numeric" placeholder="$" defaultValue={v.purchase_price} errors={e.purchase_price} />
+              <FormField name="earnest_money" label="EMD" inputMode="numeric" placeholder="$" defaultValue={v.earnest_money} errors={e.earnest_money} />
             </CardContent>
           </Card>
+          {/* Fields no longer on the form: carried through unchanged so saving doesn't wipe them. */}
+          {HIDDEN_KEPT.map((k) => <input key={k} type="hidden" name={k} value={v[k] ?? ''} />)}
         </div>
       </div>
 

@@ -18,6 +18,9 @@ export default async function NewTransactionPage({ searchParams }: PageProps) {
   ]);
   // Deep links like /transactions/new?buyer=<contactId> prefill a party.
   const known = (id?: string) => (id && options.contacts.some((c) => c.id === id) ? id : '');
+  const nameOf = (id: string) => options.contacts.find((c) => c.id === id)?.label ?? '';
+  const buyerId = known(sp.buyer);
+  const sellerId = known(sp.seller);
   // ?stage=under_dispo when started from a deal-stage page.
   const stage = (DEAL_STAGE_VALUES as readonly string[]).includes(sp.stage ?? '') ? (sp.stage as DealStage) : null;
 
@@ -40,8 +43,10 @@ export default async function NewTransactionPage({ searchParams }: PageProps) {
           side: 'buyer',
           status: 'under_contract',
           agent_id: ctx.userId,
-          buyer_contact_id: known(sp.buyer),
-          seller_contact_id: known(sp.seller),
+          buyer_contact_id: buyerId,
+          seller_contact_id: sellerId,
+          buyer_name: nameOf(buyerId),
+          seller_name: nameOf(sellerId),
           contract_date: new Intl.DateTimeFormat('en-CA', { timeZone: ctx.profile?.timezone || 'America/New_York' }).format(new Date()),
         }}
       />

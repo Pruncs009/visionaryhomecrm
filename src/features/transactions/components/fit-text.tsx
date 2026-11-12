@@ -46,9 +46,15 @@ export function FitText({ children, className, max = 14, min = 10 }: {
       }
     };
     fit();
+    // The web font can load after the first fit and is wider than the fallback.
+    let alive = true;
+    document.fonts?.ready.then(() => alive && fit());
     const ro = new ResizeObserver(fit);
     ro.observe(parent ?? el);
-    return () => ro.disconnect();
+    return () => {
+      alive = false;
+      ro.disconnect();
+    };
   }, [children, max, min]);
 
   return (

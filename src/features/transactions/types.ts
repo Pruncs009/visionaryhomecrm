@@ -52,6 +52,10 @@ export type TransactionRow = {
   arv_estimate: number | null;
   rehab_estimate: number | null;
   photos_link: string | null;
+  channel: string | null;
+  occupancy: string | null;
+  ownership_type: string | null;
+  ethnicity: string | null;
 };
 
 export type TransactionListResult = {

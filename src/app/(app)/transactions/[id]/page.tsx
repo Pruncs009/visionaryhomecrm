@@ -17,7 +17,7 @@ import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
-import { DealHeaderField, DEAL_TYPE_SUGGESTIONS, EmdInSelect, EscrowTypeField } from '@/features/deals/components/deal-header-field';
+import { CHANNELS, ChoiceField, DealHeaderField, DEAL_TYPE_SUGGESTIONS, EmdInSelect, EscrowTypeField, OCCUPANCY_OPTIONS, OWNERSHIP_TYPES } from '@/features/deals/components/deal-header-field';
 import { DeleteTransactionButton } from '@/features/transactions/components/tx-controls';
 import { getDealParties, getDealWorkspace, getPersonOptions, getTeamNameOptions, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
@@ -149,9 +149,13 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               {specs.length > 0 ? specs.join(' · ') : null}
               {tx.name !== tx.property_address && <>{specs.length > 0 && <span aria-hidden> | </span>}Deal: {tx.name}</>}
             </p>
-            <div className="grid gap-3 pt-2 sm:grid-cols-2 sm:max-w-md">
-              <DealHeaderField id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" />
-              <DealHeaderField id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
+            <div className="grid max-w-2xl gap-3 pt-2 sm:grid-cols-3">
+              <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
+              <ChoiceField key={`ch-${tx.channel ?? ''}`} id={tx.id} field="channel" value={tx.channel} options={CHANNELS} othersPlaceholder="Enter channel" />
+              <DealHeaderField key={`dt-${tx.deal_type ?? ''}`} id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
+              <ChoiceField key={`oc-${tx.occupancy ?? ''}`} id={tx.id} field="occupancy" value={tx.occupancy} options={OCCUPANCY_OPTIONS} othersPlaceholder="Enter occupancy" />
+              <ChoiceField key={`ow-${tx.ownership_type ?? ''}`} id={tx.id} field="ownership_type" value={tx.ownership_type} options={OWNERSHIP_TYPES} allowOthers={false} />
+              <DealHeaderField key={`et-${tx.ethnicity ?? ''}`} id={tx.id} field="ethnicity" value={tx.ethnicity} placeholder="Enter ethnicity" multiline />
             </div>
           </div>
         </div>

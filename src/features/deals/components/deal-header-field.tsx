@@ -26,6 +26,10 @@ const LABEL: Record<DealHeaderField, string> = {
   arv_estimate: 'ARV estimate',
   rehab_estimate: 'Rehab estimate',
   photos_link: 'Photos link',
+  channel: 'Channel',
+  occupancy: 'Occupancy',
+  ownership_type: 'Ownership type',
+  ethnicity: 'Ethnicity',
 };
 
 /**
@@ -223,27 +227,38 @@ export function EmdInSelect({ id, value }: { id: string; value: boolean | null }
   );
 }
 
-export const ESCROW_COMPANIES = ['Chicago Title Company', 'WFG Title Company', 'USA National Title Company'] as const;
 const OTHERS = '__others__';
 
 /**
- * Escrow type: pick one of the usual title companies, or "Others" and type the
- * name. Saved as the company name (transactions.escrow_type).
+ * Dropdown that saves straight to the deal. With `allowOthers`, the last option
+ * is "Others", which shows a box to type any value. Whatever is chosen or typed is
+ * saved as plain text; a saved value that isn't in the list reopens as "Others".
  */
-export function EscrowTypeField({ id, value, labelClassName }: { id: string; value: string | null; labelClassName?: string }) {
+export function ChoiceField({ id, field, value, options, allowOthers = true, othersPlaceholder, labelClassName }: {
+  id: string;
+  field: DealHeaderField;
+  value: string | null;
+  options: readonly string[];
+  allowOthers?: boolean;
+  othersPlaceholder?: string;
+  labelClassName?: string;
+}) {
   const selectId = useId();
   const inputId = useId();
+  const label = LABEL[field];
   const saved0 = value ?? '';
-  const preset = (ESCROW_COMPANIES as readonly string[]).find((c) => c.toLowerCase() === saved0.trim().toLowerCase());
+  const preset = options.find((c) => c.toLowerCase() === saved0.trim().toLowerCase());
+  // Without "Others", an old value that isn't in the list is still shown as its own option.
+  const legacy = !allowOthers && saved0 && !preset ? saved0 : null;
   const [saved, setSaved] = useState(saved0);
-  const [choice, setChoice] = useState(saved0 === '' ? '' : preset ?? OTHERS);
-  const [other, setOther] = useState(preset || saved0 === '' ? '' : saved0);
+  const [choice, setChoice] = useState(saved0 === '' ? '' : preset ?? (allowOthers ? OTHERS : saved0));
+  const [other, setOther] = useState(preset || saved0 === '' || !allowOthers ? '' : saved0);
   const [pending, start] = useTransition();
 
   const save = (next: string, message: string, onFail?: () => void) => {
     if (next.trim() === saved.trim()) return;
     start(async () => {
-      const r = await updateDealHeaderField(id, 'escrow_type', next);
+      const r = await updateDealHeaderField(id, field, next);
       if (r.ok) {
         setSaved(next.trim());
         toast.success(message);
@@ -256,7 +271,7 @@ export function EscrowTypeField({ id, value, labelClassName }: { id: string; val
 
   return (
     <div className="space-y-1">
-      <label htmlFor={selectId} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>Escrow type</label>
+      <label htmlFor={selectId} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>{label}</label>
       <NativeSelect
         id={selectId}
         className="w-full"
@@ -266,25 +281,26 @@ export function EscrowTypeField({ id, value, labelClassName }: { id: string; val
           const next = e.target.value;
           const previous = choice;
           setChoice(next);
-          if (next === OTHERS) return; // wait for the typed name
+          if (next === OTHERS) return; // wait for the typed value
           setOther('');
-          save(next, next ? `Escrow type: ${next}` : 'Escrow type cleared', () => setChoice(previous));
+          save(next, next ? `${label}: ${next}` : `${label} cleared`, () => setChoice(previous));
         }}
       >
         <NativeSelectOption value="">—</NativeSelectOption>
-        {ESCROW_COMPANIES.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}
-        <NativeSelectOption value={OTHERS}>Others</NativeSelectOption>
+        {options.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}
+        {legacy && <NativeSelectOption value={legacy}>{legacy}</NativeSelectOption>}
+        {allowOthers && <NativeSelectOption value={OTHERS}>Others</NativeSelectOption>}
       </NativeSelect>
-      {choice === OTHERS && (
+      {allowOthers && choice === OTHERS && (
         <>
-          <label htmlFor={inputId} className="sr-only">Escrow company name</label>
+          <label htmlFor={inputId} className="sr-only">{label} (other)</label>
           <AutoGrowTextarea
             id={inputId}
             value={other}
             disabled={pending}
-            placeholder="Enter escrow company name"
+            placeholder={othersPlaceholder ?? `Enter ${label.toLowerCase()}`}
             onChange={setOther}
-            onBlur={() => other.trim() && save(other, `Escrow type: ${other.trim()}`)}
+            onBlur={() => other.trim() && save(other, `${label}: ${other.trim()}`)}
             onEnter={(el) => el.blur()}
             onEscape={(el) => el.blur()}
           />
@@ -292,4 +308,17 @@ export function EscrowTypeField({ id, value, labelClassName }: { id: string; val
       )}
     </div>
   );
+}
+
+export const ESCROW_COMPANIES = ['Chicago Title Company', 'WFG Title Company', 'USA National Title Company'] as const;
+export const CHANNELS = [
+  'SMS', 'DM', 'Online', 'Sphere of Influence', 'Sphere of Influence - AO', 'Sphere of Influence - PPL',
+  'Sphere of Influence - CC', 'CC',
+] as const;
+export const OCCUPANCY_OPTIONS = ['Absentee', 'Owner occupied'] as const;
+export const OWNERSHIP_TYPES = ['Single', 'Married', 'Multiple', 'Trust', 'Corp', 'Church'] as const;
+
+/** Escrow type: the usual title companies, or "Others" to type the name. */
+export function EscrowTypeField({ id, value, labelClassName }: { id: string; value: string | null; labelClassName?: string }) {
+  return <ChoiceField id={id} field="escrow_type" value={value} options={ESCROW_COMPANIES} othersPlaceholder="Enter escrow company name" labelClassName={labelClassName} />;
 }

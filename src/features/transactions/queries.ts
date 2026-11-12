@@ -32,6 +32,10 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     arv_estimate: num(r.arv_estimate),
     rehab_estimate: num(r.rehab_estimate),
     photos_link: (r.photos_link as string | null) ?? null,
+    channel: (r.channel as string | null) ?? null,
+    occupancy: (r.occupancy as string | null) ?? null,
+    ownership_type: (r.ownership_type as string | null) ?? null,
+    ethnicity: (r.ethnicity as string | null) ?? null,
   };
 }
 

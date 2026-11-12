@@ -63,6 +63,11 @@ const HEADER_FIELDS = {
   arv_estimate: money,
   rehab_estimate: money,
   photos_link: text(2000),
+  // Header: channel and seller profile
+  channel: text(200),
+  occupancy: text(200),
+  ownership_type: text(100),
+  ethnicity: text(100),
 } as const;
 export type DealHeaderField = keyof typeof HEADER_FIELDS;
 

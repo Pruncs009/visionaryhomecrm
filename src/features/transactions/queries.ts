@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { FileCategory } from '@/types/database.types';
 import { ACTIVE_STATUSES, TX_PAGE_SIZE } from './constants';
+import { formatAddress, PARTY_ROLE_ORDER, type DealParty, type PartyRole, type PersonOption } from './parties';
 import type { TransactionFilters } from './schemas';
 import type { DealTask, DealWorkspace, Option, TransactionFile, TransactionListResult, TransactionRow } from './types';
 
@@ -213,4 +214,66 @@ export async function getTransactionFormOptions(orgId: string): Promise<{ contac
       detail: [p.city, p.state].filter(Boolean).join(', '),
     })),
   };
+}
+
+/** People added to the deal from the People panel, in panel order. */
+export async function getDealParties(orgId: string, transactionId: string): Promise<DealParty[]> {
+  const supabase = await createClient();
+  const { data: links, error } = await supabase
+    .from('deal_parties')
+    .select('id, role, contact_id, created_at')
+    .eq('organization_id', orgId)
+    .eq('transaction_id', transactionId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  if (!links?.length) return [];
+
+  const { data: people, error: peopleError } = await supabase
+    .from('contacts')
+    .select('id, full_name, email, phone, company, address_line1, city, state, postal_code')
+    .eq('organization_id', orgId)
+    .in('id', [...new Set(links.map((l) => l.contact_id as string))]);
+  if (peopleError) throw new Error(peopleError.message);
+  const byId = new Map((people ?? []).map((p) => [p.id as string, p as Record<string, string | null>]));
+
+  return links
+    .filter((l) => byId.has(l.contact_id as string))
+    .map((l) => {
+      const c = byId.get(l.contact_id as string)!;
+      return {
+        id: l.id as string,
+        role: l.role as PartyRole,
+        contactId: l.contact_id as string,
+        name: c.full_name ?? '',
+        email: c.email,
+        phone: c.phone,
+        company: c.company,
+        address: formatAddress({ addressLine1: c.address_line1, city: c.city, state: c.state, postalCode: c.postal_code }),
+      };
+    })
+    .sort((a, b) => PARTY_ROLE_ORDER.indexOf(a.role) - PARTY_ROLE_ORDER.indexOf(b.role));
+}
+
+/** Saved contacts offered when adding someone to a deal. Capped at 1000. */
+export async function getPersonOptions(orgId: string): Promise<PersonOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('id, full_name, email, phone, company, address_line1, city, state, postal_code')
+    .eq('organization_id', orgId)
+    .is('deleted_at', null)
+    .order('full_name', { ascending: true })
+    .limit(1000);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, string | null>[]).map((c) => ({
+    id: c.id!,
+    name: c.full_name ?? '',
+    email: c.email,
+    phone: c.phone,
+    company: c.company,
+    addressLine1: c.address_line1,
+    city: c.city,
+    state: c.state,
+    postalCode: c.postal_code,
+  }));
 }

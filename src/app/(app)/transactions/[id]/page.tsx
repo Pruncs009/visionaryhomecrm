@@ -9,14 +9,16 @@ import { getTeamMembers } from '@/features/leads/queries';
 import { KEY_DATES, TX_SIDE } from '@/features/transactions/constants';
 import { DocumentsPanel } from '@/features/transactions/components/documents-panel';
 import { DealNotes } from '@/features/transactions/components/deal-notes';
-import { DealPeople } from '@/features/transactions/components/deal-people';
+import { DealPeople, type PersonEntry } from '@/features/transactions/components/deal-people';
+import { AddPersonMenu } from '@/features/transactions/components/deal-people-actions';
+import { isClientRole, PARTY_ROLE_LABEL, type DealParty, type PartyRole } from '@/features/transactions/parties';
 import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
 import { DealHeaderField, DEAL_TYPE_SUGGESTIONS } from '@/features/deals/components/deal-header-field';
 import { DeleteTransactionButton } from '@/features/transactions/components/tx-controls';
-import { getDealWorkspace, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
+import { getDealParties, getDealWorkspace, getPersonOptions, getTransaction, getTransactionFiles } from '@/features/transactions/queries';
 import { uuidSchema } from '@/features/transactions/schemas';
 import type { DealWorkspace, TransactionFile, TransactionRow } from '@/features/transactions/types';
 import { isValidTimeZone } from '@/lib/dates';
@@ -49,11 +51,38 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   if (!tx) notFound();
 
   const timezone = isValidTimeZone(ctx.profile?.timezone) ? ctx.profile!.timezone : 'America/New_York';
-  const [files, members, ws] = await Promise.all([
+  const [files, members, ws, parties, personOptions] = await Promise.all([
     getTransactionFiles(org, id),
     getTeamMembers(org),
     getDealWorkspace(org, tx, timezone),
+    getDealParties(org, id),
+    getPersonOptions(org),
   ]);
+
+  // People panel. The primary buyer / seller can come from the deal form
+  // (transactions.buyer_name / seller_name) or from the panel (deal_parties).
+  const partyEntry = (p: DealParty): PersonEntry => ({
+    key: p.id, partyId: p.id, role: PARTY_ROLE_LABEL[p.role], name: p.name, href: `/contacts/${p.contactId}`,
+    email: p.email, phone: p.phone, company: p.company, address: p.address,
+  });
+  const formParty = (role: 'buyer' | 'seller'): PersonEntry[] => {
+    const name = role === 'buyer' ? tx.buyer_name : tx.seller_name;
+    const contactId = role === 'buyer' ? tx.buyer_contact_id : tx.seller_contact_id;
+    if (!name || parties.some((p) => p.role === role)) return [];
+    return [{ key: `form-${role}`, role: PARTY_ROLE_LABEL[role], name, href: contactId ? `/contacts/${contactId}` : undefined, ...(contactId ? ws.contacts[contactId] : {}) }];
+  };
+  const clientParties = parties.filter((p) => isClientRole(p.role));
+  const clients: PersonEntry[] = [
+    ...formParty('buyer'),
+    ...clientParties.filter((p) => p.role.startsWith('buyer')).map(partyEntry),
+    ...formParty('seller'),
+    ...clientParties.filter((p) => p.role.startsWith('seller')).map(partyEntry),
+  ];
+  const takenRoles: PartyRole[] = [
+    ...clientParties.map((p) => p.role),
+    ...(tx.buyer_name ? (['buyer'] as const) : []),
+    ...(tx.seller_name ? (['seller'] as const) : []),
+  ];
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
   const canDelete = ctx.role !== 'assistant';
   const editHref = `/transactions/${tx.id}/edit`;
@@ -75,7 +104,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
       </Link>
 
       {/* ---- Header ------------------------------------------------------------ */}
-      <header className="flex flex-col gap-5 rounded-xl border bg-card p-5 lg:flex-row lg:items-start">
+      <header className="flex flex-col gap-5 rounded-xl border bg-card p-5 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 gap-4">
           <div className="hidden size-24 shrink-0 items-center justify-center rounded-lg bg-muted sm:flex" aria-hidden>
             <KeyRound className="size-10 text-muted-foreground" />
@@ -101,9 +130,9 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
           </div>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-[minmax(9rem,auto)_minmax(12rem,auto)]">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 xl:w-[30rem] xl:shrink-0">
           <DealHeaderField id={tx.id} field="purchase_price" value={tx.purchase_price} inputClassName="h-9 text-lg font-semibold md:text-lg" />
-          <div className="col-span-2 space-y-3 sm:col-span-1 sm:row-span-2">
+          <div className="space-y-3 sm:row-span-2">
             <DealHeaderField id={tx.id} field="lead_manager" value={tx.lead_manager} placeholder="Name" />
             <DealHeaderField id={tx.id} field="acquisition_manager" value={tx.acquisition_manager} placeholder="Name" />
             <div className="space-y-1">
@@ -112,7 +141,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               <DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} />
             </div>
           </div>
-          <div className="col-span-2 flex flex-wrap items-end gap-2 sm:col-span-1">
+          <div className="flex flex-wrap items-end gap-2">
             <Link href={editHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil /> Edit deal</Link>
             {canDelete && <DeleteTransactionButton id={tx.id} name={tx.name} />}
           </div>
@@ -123,18 +152,17 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
       <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_300px]">
         <div className="order-2 lg:order-1">
           <DealPeople
-            editHref={editHref}
+            txId={tx.id}
+            canRemove={canDelete}
+            addButton={<AddPersonMenu txId={tx.id} takenRoles={takenRoles} people={personOptions} />}
             groups={[
-              {
-                title: 'Clients',
-                people: [
-                  ...(tx.side !== 'seller' ? [{ role: 'Buyer', name: tx.buyer_name, href: tx.buyer_contact_id ? `/contacts/${tx.buyer_contact_id}` : undefined, ...(tx.buyer_contact_id ? ws.contacts[tx.buyer_contact_id] : {}) }] : []),
-                  ...(tx.side !== 'buyer' ? [{ role: 'Seller', name: tx.seller_name, href: tx.seller_contact_id ? `/contacts/${tx.seller_contact_id}` : undefined, ...(tx.seller_contact_id ? ws.contacts[tx.seller_contact_id] : {}) }] : []),
-                ],
-              },
+              { title: 'Clients', people: clients },
               {
                 title: 'Team',
-                people: [{ role: tx.side === 'seller' ? "Listing agent" : tx.side === 'buyer' ? "Buyer's agent" : 'Agent', name: tx.agent_name }],
+                people: [
+                  ...(tx.agent_name ? [{ key: 'agent', role: tx.side === 'seller' ? 'Listing agent' : tx.side === 'buyer' ? "Buyer's agent" : 'Agent', name: tx.agent_name }] : []),
+                  ...parties.filter((p) => !isClientRole(p.role)).map(partyEntry),
+                ],
               },
             ]}
           />

@@ -1,6 +1,7 @@
-# Supabase CLI config for LOCAL development (`supabase start`).
+# Supabase CLI config. The top-level values are for LOCAL development (`supabase start`).
+# The [remotes.production] block overrides them for the hosted project; apply with:
+#   npx supabase config push --remote
 # Only the settings this project cares about; the CLI fills in defaults for the rest.
-# For the hosted project, set the same values in the Dashboard (see docs/AUTH.md).
 
 project_id = "visionary-home-crm"
 
@@ -17,16 +18,32 @@ enable_signup = true
 minimum_password_length = 8
 
 [auth.email]
-enable_signup = true
+enabled = true
 enable_confirmations = true      # users must verify their email before signing in
 double_confirm_changes = true
 secure_password_change = true
 max_frequency = "60s"            # one email per address per minute
 
-[auth.email.template.confirmation]
-subject = "Confirm your VisionaryHomeCRM account"
-content_path = "./supabase/templates/confirmation.html"
+# Branded email templates (supabase/templates/*.html) are switched off for now:
+# Supabase's free tier refuses template changes unless a custom SMTP provider is set
+# (Dashboard → Authentication → SMTP). Until then the default emails are used, and their
+# links land on /auth/callback, which the app handles. After adding SMTP, uncomment and run
+#   npx supabase config push --remote
+# [auth.email.template.confirmation]
+# subject = "Confirm your VisionaryHomeCRM account"
+# content_path = "./supabase/templates/confirmation.html"
+#
+# [auth.email.template.recovery]
+# subject = "Reset your VisionaryHomeCRM password"
+# content_path = "./supabase/templates/recovery.html"
 
-[auth.email.template.recovery]
-subject = "Reset your VisionaryHomeCRM password"
-content_path = "./supabase/templates/recovery.html"
+# ---- Hosted production project (Vercel: visionaryhomecrm.vercel.app) ----------
+[remotes.production]
+project_id = "zzeuibfshlbbwlrgutud"
+
+[remotes.production.auth]
+site_url = "https://visionaryhomecrm.vercel.app"
+additional_redirect_urls = [
+  "https://visionaryhomecrm.vercel.app/**",
+  "https://visionaryhomecrm-*-pruncs009.vercel.app/**", # Vercel preview deployments
+]

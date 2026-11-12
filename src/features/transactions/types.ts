@@ -44,6 +44,14 @@ export type TransactionRow = {
   contingency_end_date: string | null;
   transaction_coordinator: string | null;
   emd_in: boolean | null;
+  contingency_type: string | null;
+  escrow_type: string | null;
+  escrow_number: string | null;
+  occupancy_strategy: string | null;
+  lockbox_code: string | null;
+  arv_estimate: number | null;
+  rehab_estimate: number | null;
+  photos_link: string | null;
 };
 
 export type TransactionListResult = {

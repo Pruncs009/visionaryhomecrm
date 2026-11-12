@@ -54,6 +54,15 @@ const HEADER_FIELDS = {
   transaction_coordinator: text(200),
   purchase_price: money,
   earnest_money: money,
+  // Deal details panel
+  contingency_type: text(200),
+  escrow_type: text(200),
+  escrow_number: text(100),
+  occupancy_strategy: text(500),
+  lockbox_code: text(100),
+  arv_estimate: money,
+  rehab_estimate: money,
+  photos_link: text(2000),
 } as const;
 export type DealHeaderField = keyof typeof HEADER_FIELDS;
 

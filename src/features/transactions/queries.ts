@@ -24,6 +24,14 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     contingency_end_date: (r.contingency_end_date as string | null) ?? null,
     transaction_coordinator: (r.transaction_coordinator as string | null) ?? null,
     emd_in: typeof r.emd_in === 'boolean' ? r.emd_in : null,
+    contingency_type: (r.contingency_type as string | null) ?? null,
+    escrow_type: (r.escrow_type as string | null) ?? null,
+    escrow_number: (r.escrow_number as string | null) ?? null,
+    occupancy_strategy: (r.occupancy_strategy as string | null) ?? null,
+    lockbox_code: (r.lockbox_code as string | null) ?? null,
+    arv_estimate: num(r.arv_estimate),
+    rehab_estimate: num(r.rehab_estimate),
+    photos_link: (r.photos_link as string | null) ?? null,
   };
 }
 

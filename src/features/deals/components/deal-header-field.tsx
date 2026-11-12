@@ -17,7 +17,17 @@ const LABEL: Record<DealHeaderField, string> = {
   acquisition_manager: 'Acquisition Manager',
   transaction_coordinator: 'Transaction coordinator',
   earnest_money: 'EMD',
+  contingency_type: 'Contingency type',
+  escrow_type: 'Escrow type',
+  escrow_number: 'Escrow #',
+  occupancy_strategy: 'Occupancy / vacate strategy',
+  lockbox_code: 'Lockbox code',
+  arv_estimate: 'ARV estimate',
+  rehab_estimate: 'Rehab estimate',
+  photos_link: 'Photos link',
 };
+
+const MONEY_FIELDS: DealHeaderField[] = ['purchase_price', 'earnest_money', 'arv_estimate', 'rehab_estimate'];
 
 const formatMoney = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
@@ -43,7 +53,7 @@ export function DealHeaderField({
 }) {
   const inputId = useId();
   const listId = useId();
-  const isMoney = field === 'purchase_price' || field === 'earnest_money';
+  const isMoney = MONEY_FIELDS.includes(field);
   const show = (v: string | number | null) => (v === null ? '' : typeof v === 'number' ? formatMoney(v) : v);
 
   const [saved, setSaved] = useState(show(value));

@@ -6,13 +6,12 @@ import { Download, Eye, FileText, Image as ImageIcon, Trash2, Upload } from 'luc
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import type { FileCategory } from '@/types/database.types';
 import { deleteTransactionFile, getFileDownloadUrl, recordTransactionUpload } from '../actions';
 import {
-  ALLOWED_UPLOAD_TYPES, FILE_CATEGORY, FILE_CATEGORY_VALUES, MAX_UPLOAD_BYTES, STORAGE_BUCKET, transactionFilePath,
+  ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES, STORAGE_BUCKET, transactionFilePath,
 } from '../constants';
 import type { TransactionFile } from '../types';
 import { FilePreview } from './file-preview';
@@ -39,7 +38,8 @@ export function DocumentsPanel({
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [category, setCategory] = useState<FileCategory>('contract');
+  // No type picker on the Docs tab: uploads are stored as "other".
+  const category: FileCategory = 'other';
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [, start] = useTransition();
@@ -73,12 +73,6 @@ export function DocumentsPanel({
     <Card>
       <CardHeader><CardTitle>Documents</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <NativeSelect aria-label="Document type" value={category} onChange={(e) => setCategory(e.target.value as FileCategory)}>
-            {FILE_CATEGORY_VALUES.map((c) => <NativeSelectOption key={c} value={c}>{FILE_CATEGORY[c]}</NativeSelectOption>)}
-          </NativeSelect>
-          <span className="text-xs text-muted-foreground">applies to the next upload</span>
-        </div>
         <label
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -113,7 +107,7 @@ export function DocumentsPanel({
                       {f.fileName}
                     </button>
                     <p className="text-xs text-muted-foreground">
-                      {FILE_CATEGORY[f.category]} · {formatBytes(f.sizeBytes)} · {when.format(new Date(f.createdAt))}{f.uploaderName && ` · ${f.uploaderName}`}
+                      {formatBytes(f.sizeBytes)} · {when.format(new Date(f.createdAt))}{f.uploaderName && ` · ${f.uploaderName}`}
                     </p>
                   </div>
                   <Button variant="ghost" size="icon-sm" aria-label={`View ${f.fileName}`} title="View" onClick={() => setPreviewing(f)}>

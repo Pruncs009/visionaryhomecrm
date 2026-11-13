@@ -4,6 +4,7 @@ import { useId, useLayoutEffect, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { FitText } from '@/features/transactions/components/fit-text';
 import { cn } from '@/lib/utils';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { updateDealHeaderField, updateEmdIn, type DealHeaderField } from '../actions';
@@ -115,6 +116,7 @@ export function DealHeaderField({
   inputClassName,
   labelClassName,
   multiline,
+  fitLabel,
 }: {
   id: string;
   field: DealHeaderField;
@@ -126,6 +128,8 @@ export function DealHeaderField({
   labelClassName?: string;
   /** Wrap long text onto more lines instead of cutting it off (Enter still saves). */
   multiline?: boolean;
+  /** Keep the label on one line, shrinking its font if it's long (lines up rows of fields). */
+  fitLabel?: boolean;
 }) {
   const inputId = useId();
   const listId = useId();
@@ -154,7 +158,9 @@ export function DealHeaderField({
 
   return (
     <div className={cn('space-y-1', className)}>
-      <label htmlFor={inputId} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>{LABEL[field]}</label>
+      <label htmlFor={inputId} title={LABEL[field]} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>
+        {fitLabel ? <FitText max={11} min={8}>{LABEL[field]}</FitText> : LABEL[field]}
+      </label>
       {multiline ? (
         <AutoGrowTextarea
           id={inputId}

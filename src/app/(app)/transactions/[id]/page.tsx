@@ -146,7 +146,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               </p>
             )}
             {/* Property details: small, free text, wraps so nothing is cut off */}
-            <div className="grid max-w-3xl grid-cols-2 gap-x-3 gap-y-1.5 pt-1 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid max-w-3xl grid-cols-[repeat(auto-fill,minmax(min(10.5rem,calc(50%-0.375rem)),1fr))] gap-x-3 gap-y-1.5 pt-1">
               {PROPERTY_DETAILS.map(([f, fallback]) => {
                 const v = tx[f] ?? fallback(prop);
                 return (
@@ -157,8 +157,9 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
                     value={v}
                     placeholder="—"
                     multiline
+                    fitLabel
                     className="space-y-0.5"
-                    labelClassName="text-[11px] leading-tight text-muted-foreground"
+                    labelClassName="h-4 leading-4 text-muted-foreground"
                     inputClassName="min-h-7 px-2 py-1 text-xs md:text-xs"
                   />
                 );

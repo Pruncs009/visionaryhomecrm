@@ -10,15 +10,5 @@ const SHEET_GID = '1161341563';
 
 export default async function PipelineReviewPage() {
   await requireContext();
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Pipeline Review Tracker</h1>
-        <p className="text-sm text-muted-foreground">
-          The team&apos;s Google Sheet, right here. Changes made here are saved in Google Sheets, and changes made in Google Sheets show here.
-        </p>
-      </div>
-      <SheetEmbed sheetId={SHEET_ID} gid={SHEET_GID} />
-    </div>
-  );
+  return <SheetEmbed sheetId={SHEET_ID} gid={SHEET_GID} />;
 }

@@ -160,6 +160,9 @@ function AddPartyForm({ kind, txId, takenRoles, people, onDone }: {
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const isCollab = kind === 'collaborator';
+  // Clients: phone + email appear once the name is in (on leaving the name box, or a full "First Last").
+  const [nameDone, setNameDone] = useState(false);
+  const showClientContact = !isCollab && (nameDone || /\S+\s+\S/.test(f.fullName.trim()));
   const roles = isCollab ? COLLABORATOR_ROLES : CLIENT_ROLES;
 
   // Only contacts saved for this role's department are offered and reused.
@@ -174,10 +177,12 @@ function AddPartyForm({ kind, txId, takenRoles, people, onDone }: {
     const hit = options.find((p) => p.name.toLowerCase() === value.trim().toLowerCase());
     setF((prev) => {
       const next = { ...prev, fullName: value };
-      // Picking a saved collaborator fills in what we already know (without overwriting typing).
-      if (hit && isCollab) {
+      // Picking a saved contact fills in what we already know (without overwriting typing).
+      if (hit) {
         next.phone ||= hit.phone ?? '';
         next.email ||= hit.email ?? '';
+      }
+      if (hit && isCollab) {
         next.company ||= hit.company ?? '';
         next.addressLine1 ||= hit.addressLine1 ?? '';
         next.city ||= hit.city ?? '';
@@ -192,7 +197,7 @@ function AddPartyForm({ kind, txId, takenRoles, people, onDone }: {
     e.preventDefault();
     if (!role) return;
     start(async () => {
-      const r = await addDealParty({ txId, role, contactId: match?.id ?? '', ...(isCollab ? f : { ...EMPTY_DETAILS, fullName: f.fullName }) });
+      const r = await addDealParty({ txId, role, contactId: match?.id ?? '', ...(isCollab ? f : { ...EMPTY_DETAILS, fullName: f.fullName, phone: f.phone, email: f.email }) });
       if (r.ok) {
         toast.success(`${PARTY_ROLE_LABEL[role]} added`);
         onDone();
@@ -213,7 +218,7 @@ function AddPartyForm({ kind, txId, takenRoles, people, onDone }: {
 
       <div className="space-y-1.5">
         <label htmlFor={`${uid}-role`} className="text-sm font-medium">{isCollab ? 'Collaborator type' : 'Client role'}</label>
-        <NativeSelect id={`${uid}-role`} className="w-full" value={role} onChange={(e) => { setRole(e.target.value as PartyRole); setErrors({}); setF(EMPTY_DETAILS); }} aria-invalid={!!errors.role?.[0]}>
+        <NativeSelect id={`${uid}-role`} className="w-full" value={role} onChange={(e) => { setRole(e.target.value as PartyRole); setErrors({}); setF(EMPTY_DETAILS); setNameDone(false); }} aria-invalid={!!errors.role?.[0]}>
           <NativeSelectOption value="" disabled>Select…</NativeSelectOption>
           {roles.map((r) => {
             const taken = takenRoles.includes(r);
@@ -234,6 +239,7 @@ function AddPartyForm({ kind, txId, takenRoles, people, onDone }: {
               error={errors.fullName?.[0]}
               list={`${uid}-people`}
               placeholder={options.length ? `Type a name or pick a saved ${roleGroup(role).toLowerCase()}` : 'Type the full name'}
+              onBlur={() => f.fullName.trim() && setNameDone(true)}
               autoFocus
             />
             <datalist id={`${uid}-people`}>
@@ -244,6 +250,15 @@ function AddPartyForm({ kind, txId, takenRoles, people, onDone }: {
             )}
           </div>
           {isCollab && <DetailFields uid={uid} f={f} set={set} errors={errors} companyLabel={companyLabelFor(role)} />}
+          {showClientContact && (
+            <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Add a phone number and email if you have them (optional).</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextField id={`${uid}-phone`} label="Phone number" value={f.phone} onChange={(v) => set('phone', v)} error={errors.phone?.[0]} type="tel" inputMode="tel" />
+                <TextField id={`${uid}-email`} label="Email address" value={f.email} onChange={(v) => set('email', v)} error={errors.email?.[0]} type="email" inputMode="email" />
+              </div>
+            </div>
+          )}
         </>
       )}
 

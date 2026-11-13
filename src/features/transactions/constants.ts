@@ -104,3 +104,7 @@ export const BC_SETUP_TASKS = [
   "Enter buyer's and seller's names",
   'Enter escrow type',
 ] as const;
+
+/** Lead Manager follow-ups added to every new deal (tasks.kind = 'lm_followup'), due a week out. */
+export const LM_TASKS = ['Enter campaign name', 'Enter ARV estimate', 'Enter rehab estimate', 'Enter photos link'] as const;
+export const LM_TASK_DAYS = 7;

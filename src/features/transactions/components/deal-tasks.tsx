@@ -64,7 +64,11 @@ export function DealTasks({
   const names = useMemo(() => new Map(members.map((m) => [m.userId, m.name])), [members]);
 
   // Setup checklist first, in its own order; then everything else as sorted by the server.
-  const ordered = [...sortSetupTasks(optimistic.filter((t) => t.kind === 'deal_setup')), ...optimistic.filter((t) => t.kind !== 'deal_setup')];
+  const ordered = [
+    ...sortSetupTasks(optimistic.filter((t) => t.kind === 'deal_setup')),
+    ...sortSetupTasks(optimistic.filter((t) => t.kind === 'lm_followup')),
+    ...optimistic.filter((t) => t.kind !== 'deal_setup' && t.kind !== 'lm_followup'),
+  ];
   const withBucket = ordered.map((t) => ({ ...t, bucket: bucketOf(t, today) }));
   const counts = Object.fromEntries(BUCKETS.map((b) => [b.key, withBucket.filter((t) => t.bucket === b.key).length])) as Record<Bucket, number>;
   const visible = withBucket.filter((t) => (filter ? t.bucket === filter : t.bucket !== 'completed'));
@@ -161,6 +165,8 @@ export function DealTasks({
                     <td className="py-2.5 pr-3">
                       {t.assigneeRole === 'lead_acquisition' ? (
                         <ManagersWho managers={managers} />
+                      ) : t.assigneeRole === 'lead_manager' ? (
+                        <ManagersWho managers={{ lead: managers.lead, acquisition: null }} emptyLabel="Lead Mgr" />
                       ) : who ? (
                         <Initials name={who} size="sm" title={who} />
                       ) : (
@@ -242,10 +248,10 @@ function AddTaskForm({ txId, members, onDone }: { txId: string; members: TeamMem
 }
 
 /** Assignees of a setup task: the deal's Lead and Acquisition Manager. */
-function ManagersWho({ managers }: { managers: DealManagers }) {
+function ManagersWho({ managers, emptyLabel = 'Lead & Acq. Mgr' }: { managers: DealManagers; emptyLabel?: string }) {
   const names = [managers.lead, managers.acquisition].filter((n): n is string => !!n);
   const unique = [...new Set(names)];
-  if (unique.length === 0) return <span className="text-xs whitespace-nowrap text-muted-foreground">Lead &amp; Acq. Mgr</span>;
+  if (unique.length === 0) return <span className="text-xs whitespace-nowrap text-muted-foreground">{emptyLabel}</span>;
   return (
     <span className="flex -space-x-1.5" title={managersLabel(managers)}>
       {unique.map((n) => <Initials key={n} name={n} size="sm" title={n} />)}

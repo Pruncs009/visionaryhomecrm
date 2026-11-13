@@ -91,6 +91,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   const managers = { lead: tx.lead_manager, acquisition: tx.acquisition_manager };
   const splitDeal = isSplitDeal(tx);
   const setupTasks = ws.tasks.filter((t) => t.kind === 'deal_setup');
+  const lmTasks = ws.tasks.filter((t) => t.kind === 'lm_followup');
 
   const team: TeamNames = {
     transaction_coordinator: tx.transaction_coordinator,
@@ -130,6 +131,9 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         txId={tx.id}
         openCount={setupTasks.filter((t) => !t.done).length}
         overdueCount={setupTasks.filter((t) => !t.done && t.dueDate !== null && t.dueDate < today).length}
+        lmOpenCount={lmTasks.filter((t) => !t.done).length}
+        lmOverdueCount={lmTasks.filter((t) => !t.done && t.dueDate !== null && t.dueDate < today).length}
+        lmDueDate={lmTasks.find((t) => !t.done)?.dueDate ?? null}
         managers={managers}
         justCreated={sp.setup === '1'}
       />

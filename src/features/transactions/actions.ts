@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { TransactionStatus } from '@/types/database.types';
 import { z } from 'zod';
 import { DEAL_STAGE_VALUES } from '@/features/deals/constants';
-import { DEAL_SETUP_TASKS, STORAGE_BUCKET } from './constants';
+import { DEAL_SETUP_TASKS, LM_TASK_DAYS, LM_TASKS, STORAGE_BUCKET } from './constants';
 
 const dealStageSchema = z.enum(DEAL_STAGE_VALUES);
 import { recordUploadSchema, transactionFormSchema, txStatusSchema, uuidSchema } from './schemas';
@@ -108,6 +108,22 @@ export async function saveTransaction(_prev: ActionState, formData: FormData): P
       })),
     );
     if (setupError) console.error('[transactions] could not add setup tasks', setupError);
+
+    // Lead Manager follow-ups: upcoming for a week, overdue after that.
+    const [y, m, dd] = today.split('-').map(Number);
+    const due = new Date(Date.UTC(y!, m! - 1, dd! + LM_TASK_DAYS, 12)).toISOString();
+    const { error: lmError } = await supabase.from('tasks').insert(
+      LM_TASKS.map((title) => ({
+        organization_id: ctx.organization.id,
+        transaction_id: id,
+        title,
+        priority: 'normal' as const,
+        due_at: due,
+        kind: 'lm_followup',
+        assignee_role: 'lead_manager',
+      })),
+    );
+    if (lmError) console.error('[transactions] could not add Lead Manager tasks', lmError);
   }
 
   // Columns save_transaction() doesn't know about (migrations 11-12), plus the

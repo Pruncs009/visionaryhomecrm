@@ -127,6 +127,30 @@ async function createBcCopy(orgId: string, sourceId: string, timezone: string): 
     })),
   );
   if (taskError) console.error('[deals] could not add B-C setup tasks', taskError);
+
+  // Lead Manager follow-ups that aren't done yet come along (same due date), so
+  // they stay upcoming / overdue on the B-C deal too.
+  const { data: lmOpen } = await supabase
+    .from('tasks')
+    .select('title, priority, due_at')
+    .eq('organization_id', orgId)
+    .eq('transaction_id', sourceId)
+    .eq('kind', 'lm_followup')
+    .in('status', ['todo', 'in_progress']);
+  if (lmOpen?.length) {
+    const { error: lmError } = await supabase.from('tasks').insert(
+      (lmOpen as { title: string; priority: string; due_at: string | null }[]).map((t) => ({
+        organization_id: orgId,
+        transaction_id: id,
+        title: t.title,
+        priority: t.priority,
+        due_at: t.due_at,
+        kind: 'lm_followup',
+        assignee_role: 'lead_manager',
+      })),
+    );
+    if (lmError) console.error('[deals] could not copy Lead Manager tasks', lmError);
+  }
   return { ok: true, id };
 }
 

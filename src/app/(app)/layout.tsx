@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { cn } from '@/lib/utils';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
+import { ChatWidget } from '@/features/chat/components/chat-widget';
 import { APP_SHELL_ID, BG_COOKIE, normalizeBg, shellTheme } from '@/features/theme/background';
 import { requireContext } from '@/features/auth/guards';
 import { getDealStageCounts } from '@/features/deals/queries';
@@ -38,6 +39,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           background={background}
         />
         <main className="flex-1 p-6">{children}</main>
+        {/* Team chat (bottom-right button) */}
+        <ChatWidget me={{ id: ctx.userId, name: ctx.profile?.full_name ?? ctx.email }} orgId={ctx.organization.id} />
       </div>
     </div>
   );

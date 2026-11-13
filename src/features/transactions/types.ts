@@ -94,6 +94,10 @@ export type DealTask = {
   dueDate: string | null;
   completedAt: string | null;
   assignedTo: string | null;
+  /** 'deal_setup' for the new-deal checklist */
+  kind: string | null;
+  /** 'lead_acquisition': assigned to the deal's Lead + Acquisition Manager (names on the deal) */
+  assigneeRole: string | null;
 };
 
 export type DealNote = {

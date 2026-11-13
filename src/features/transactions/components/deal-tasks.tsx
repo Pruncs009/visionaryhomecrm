@@ -13,6 +13,7 @@ import { addDealTask, deleteDealTask, setDealTaskDone } from '../deal-actions';
 import type { DealTask } from '../types';
 import { formatDateOnly } from './tx-bits';
 import { Initials } from './deal-people';
+import { managersLabel, sortSetupTasks, type DealManagers } from './deal-setup-dialog';
 
 type Bucket = 'overdue' | 'today' | 'upcoming' | 'completed';
 
@@ -44,10 +45,13 @@ export function DealTasks({
   members,
   today,
   canDelete,
+  managers,
 }: {
   txId: string;
   tasks: DealTask[];
   members: TeamMember[];
+  /** Lead / Acquisition Manager names on the deal (assignees of the setup checklist). */
+  managers: DealManagers;
   /** YYYY-MM-DD in the viewer's timezone */
   today: string;
   canDelete: boolean;
@@ -60,7 +64,9 @@ export function DealTasks({
   const [, start] = useTransition();
   const names = useMemo(() => new Map(members.map((m) => [m.userId, m.name])), [members]);
 
-  const withBucket = optimistic.map((t) => ({ ...t, bucket: bucketOf(t, today) }));
+  // Setup checklist first, in its own order; then everything else as sorted by the server.
+  const ordered = [...sortSetupTasks(optimistic.filter((t) => t.kind === 'deal_setup')), ...optimistic.filter((t) => t.kind !== 'deal_setup')];
+  const withBucket = ordered.map((t) => ({ ...t, bucket: bucketOf(t, today) }));
   const counts = Object.fromEntries(BUCKETS.map((b) => [b.key, withBucket.filter((t) => t.bucket === b.key).length])) as Record<Bucket, number>;
   const visible = withBucket.filter((t) => (filter ? t.bucket === filter : t.bucket !== 'completed'));
 
@@ -154,7 +160,13 @@ export function DealTasks({
                       {t.dueDate ? formatDateOnly(t.dueDate, { month: '2-digit', day: '2-digit', year: '2-digit' }) : '—'}
                     </td>
                     <td className="py-2.5 pr-3">
-                      {who ? <Initials name={who} size="sm" title={who} /> : <span className="text-muted-foreground">—</span>}
+                      {t.assigneeRole === 'lead_acquisition' ? (
+                        <ManagersWho managers={managers} />
+                      ) : who ? (
+                        <Initials name={who} size="sm" title={who} />
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="py-2.5 pr-3">
                       <span className={cn('rounded-full px-2 py-0.5 text-xs', PRIORITY[t.priority].className)}>{PRIORITY[t.priority].label}</span>
@@ -227,5 +239,17 @@ function AddTaskForm({ txId, members, onDone }: { txId: string; members: TeamMem
         <p className="text-sm text-destructive sm:col-span-5">{err('title') ?? err('due') ?? state.error}</p>
       )}
     </form>
+  );
+}
+
+/** Assignees of a setup task: the deal's Lead and Acquisition Manager. */
+function ManagersWho({ managers }: { managers: DealManagers }) {
+  const names = [managers.lead, managers.acquisition].filter((n): n is string => !!n);
+  const unique = [...new Set(names)];
+  if (unique.length === 0) return <span className="text-xs whitespace-nowrap text-muted-foreground">Lead &amp; Acq. Mgr</span>;
+  return (
+    <span className="flex -space-x-1.5" title={managersLabel(managers)}>
+      {unique.map((n) => <Initials key={n} name={n} size="sm" title={n} />)}
+    </span>
   );
 }

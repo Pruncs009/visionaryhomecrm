@@ -153,7 +153,7 @@ export async function getDealWorkspace(orgId: string, tx: TransactionRow, timezo
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from('tasks')
-      .select('id, title, status, priority, due_at, completed_at, assigned_to')
+      .select('id, title, status, priority, due_at, completed_at, assigned_to, kind, assignee_role, created_at')
       .eq('organization_id', orgId)
       .eq('transaction_id', tx.id)
       .neq('status', 'cancelled')
@@ -196,6 +196,8 @@ export async function getDealWorkspace(orgId: string, tx: TransactionRow, timezo
       dueDate: t.due_at ? dateInTz.format(new Date(t.due_at as string)) : null,
       completedAt: (t.completed_at as string | null) ?? null,
       assignedTo: (t.assigned_to as string | null) ?? null,
+      kind: (t.kind as string | null) ?? null,
+      assigneeRole: (t.assignee_role as string | null) ?? null,
     })),
     notes: ((notes.data ?? []) as Record<string, unknown>[]).map((n) => {
       const raw = n.author as unknown;

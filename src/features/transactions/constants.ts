@@ -60,3 +60,11 @@ export function transactionFilePath(orgId: string, transactionId: string, fileNa
 }
 
 export const TX_PAGE_SIZE = 25;
+
+/** Checklist added to every new deal (tasks.kind = 'deal_setup'), in order. */
+export const DEAL_SETUP_TASKS = [
+  'Verify purchase price and EMD',
+  'Enter names for Lead and Acquisition Manager',
+  'Enter deal type and channel',
+  'Enter occupancy, owner (if known) and ethnicity (if known)',
+] as const;

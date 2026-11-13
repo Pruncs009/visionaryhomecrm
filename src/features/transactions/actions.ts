@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { TransactionStatus } from '@/types/database.types';
 import { z } from 'zod';
 import { DEAL_STAGE_VALUES } from '@/features/deals/constants';
-import { STORAGE_BUCKET } from './constants';
+import { DEAL_SETUP_TASKS, STORAGE_BUCKET } from './constants';
 
 const dealStageSchema = z.enum(DEAL_STAGE_VALUES);
 import { recordUploadSchema, transactionFormSchema, txStatusSchema, uuidSchema } from './schemas';
@@ -89,6 +89,26 @@ export async function saveTransaction(_prev: ActionState, formData: FormData): P
   if (error) return { error: dbErrorMessage(error), values };
 
   const id = data as string;
+
+  // New deal: add the setup checklist (shown as a popup on the deal page).
+  if (!d.transaction_id) {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: ctx.profile?.timezone || 'America/New_York' }).format(new Date());
+    const { error: setupError } = await supabase.from('tasks').insert(
+      DEAL_SETUP_TASKS.map((title) => ({
+        organization_id: ctx.organization.id,
+        transaction_id: id,
+        title,
+        priority: 'high' as const,
+        // Due the day the deal is created (noon UTC = same day in US timezones), so
+        // anything left open shows as overdue from tomorrow.
+        due_at: `${today}T12:00:00Z`,
+        kind: 'deal_setup',
+        assignee_role: 'lead_acquisition',
+      })),
+    );
+    if (setupError) console.error('[transactions] could not add setup tasks', setupError);
+  }
+
   // Columns save_transaction() doesn't know about (migrations 11-12), plus the
   // deal stage for a new deal opened from a deal-stage page.
   const stage = dealStageSchema.safeParse(formData.get('deal_stage'));
@@ -110,7 +130,8 @@ export async function saveTransaction(_prev: ActionState, formData: FormData): P
     return { error: dbErrorMessage(extraError), values: { ...values, transaction_id: id } };
   }
   revalidateTransactions(id);
-  redirect(`/transactions/${id}`);
+  // A new deal opens with the setup checklist popup.
+  redirect(d.transaction_id ? `/transactions/${id}` : `/transactions/${id}?setup=1`);
 }
 
 // -----------------------------------------------------------------------------

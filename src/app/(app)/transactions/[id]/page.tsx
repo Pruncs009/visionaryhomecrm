@@ -14,6 +14,7 @@ import { DealPeople, type PersonEntry } from '@/features/transactions/components
 import { AddPersonMenu, EMPTY_DETAILS, type TeamNames } from '@/features/transactions/components/deal-people-actions';
 import { isClientRole, isSingleSlotRole, PARTY_ROLE_LABEL, TEAM_ROLE_LABEL, TEAM_ROLES, type DealParty, type PartyRole } from '@/features/transactions/parties';
 import { DealTasks } from '@/features/transactions/components/deal-tasks';
+import { DealSetupDialog } from '@/features/transactions/components/deal-setup-dialog';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
@@ -39,7 +40,7 @@ type TabKey = (typeof TABS)[number]['key'];
 
 const SIDE_BADGE: Record<TransactionRow['side'], string> = { buyer: 'Buyer', seller: 'Seller', dual: 'Dual' };
 
-type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> };
+type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; setup?: string }> };
 
 export default async function TransactionDetailPage({ params, searchParams }: PageProps) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
@@ -87,6 +88,9 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
       edit: { kind: 'primary', role, details: { ...EMPTY_DETAILS, fullName: name, phone: known?.phone ?? '', email: known?.email ?? '' } },
     }];
   };
+  const managers = { lead: tx.lead_manager, acquisition: tx.acquisition_manager };
+  const setupTasks = ws.tasks.filter((t) => t.kind === 'deal_setup');
+
   const team: TeamNames = {
     transaction_coordinator: tx.transaction_coordinator,
     acquisition_manager: tx.acquisition_manager,
@@ -119,6 +123,10 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   return (
     <div className="mx-auto max-w-[1500px] space-y-4">
       <NavHighlight href={stageHref(tx.deal_stage)} />
+      {/* Right after a new deal is created (?setup=1): the setup checklist popup */}
+      {setupTasks.length > 0 && sp.setup === '1' && setupTasks.some((t) => !t.done) && (
+        <DealSetupDialog txId={tx.id} tasks={setupTasks} managers={managers} defaultOpen />
+      )}
       {/* Back to the stage on the left, deal actions on the right */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link href={stageHref(tx.deal_stage)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -249,7 +257,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
             })}
           </nav>
           <div className="p-5">
-            {tab === 'tasks' && <DealTasks txId={tx.id} tasks={ws.tasks} members={members} today={today} canDelete={canDelete} />}
+            {tab === 'tasks' && <DealTasks txId={tx.id} tasks={ws.tasks} members={members} today={today} canDelete={canDelete} managers={managers} />}
             {tab === 'notes' && <DealNotes txId={tx.id} notes={ws.notes} timezone={timezone} canDelete={canDelete} />}
             {tab === 'docs' && <DocumentsPanel orgId={org} transactionId={tx.id} files={files} timezone={timezone} canDelete={canDelete} />}
             {tab === 'details' && <Details tx={tx} ws={ws} editHref={editHref} />}

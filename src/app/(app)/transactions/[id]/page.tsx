@@ -14,7 +14,7 @@ import { DealPeople, type PersonEntry } from '@/features/transactions/components
 import { AddPersonMenu, EMPTY_DETAILS, type TeamNames } from '@/features/transactions/components/deal-people-actions';
 import { isClientRole, isSingleSlotRole, PARTY_ROLE_LABEL, TEAM_ROLE_LABEL, TEAM_ROLES, type DealParty, type PartyRole } from '@/features/transactions/parties';
 import { DealTasks } from '@/features/transactions/components/deal-tasks';
-import { DealSetupDialog } from '@/features/transactions/components/deal-setup-dialog';
+import { DealSetupReminder } from '@/features/transactions/components/deal-setup-dialog';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
@@ -124,10 +124,15 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   return (
     <div className="mx-auto max-w-[1500px] space-y-4">
       <NavHighlight href={stageHref(tx.deal_stage)} />
-      {/* Right after a new deal is created (?setup=1): the setup checklist popup */}
-      {setupTasks.length > 0 && sp.setup === '1' && setupTasks.some((t) => !t.done) && (
-        <DealSetupDialog txId={tx.id} tasks={setupTasks} managers={managers} defaultOpen />
-      )}
+      {/* Setup reminder: right after a new deal is created (?setup=1) and while setup tasks are overdue.
+          It only reminds; the tasks are completed on the Tasks tab. */}
+      <DealSetupReminder
+        txId={tx.id}
+        openCount={setupTasks.filter((t) => !t.done).length}
+        overdueCount={setupTasks.filter((t) => !t.done && t.dueDate !== null && t.dueDate < today).length}
+        managers={managers}
+        justCreated={sp.setup === '1'}
+      />
       {/* Back to the stage on the left, deal actions on the right */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link href={stageHref(tx.deal_stage)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">

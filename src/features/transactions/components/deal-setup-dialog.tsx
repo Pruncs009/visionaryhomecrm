@@ -1,14 +1,11 @@
 'use client';
 
-import { useOptimistic, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import { ClipboardCheck, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { BellRing, X } from 'lucide-react';
+import { buttonVariants } from '@/components/ui/button';
 import { DEAL_SETUP_TASKS } from '../constants';
-import { setDealTaskDone } from '../deal-actions';
-import type { DealTask } from '../types';
 
 export type DealManagers = { lead: string | null; acquisition: string | null };
 
@@ -27,25 +24,40 @@ export function managersLabel(m: DealManagers) {
 }
 
 /**
- * Popup shown right after a new deal is created: the 4 setup tasks, each with a
- * checkbox on the right. Closing it keeps the tasks on the Tasks tab.
+ * Reminder popup for the deal setup checklist. It only reminds: the tasks are
+ * completed on the Tasks tab. Shows right after a new deal is created, and when
+ * setup tasks are overdue (once per browser session per deal, so it doesn't
+ * reappear on every visit).
  */
-export function DealSetupDialog({ txId, tasks, managers, defaultOpen }: {
+export function DealSetupReminder({ txId, openCount, overdueCount, managers, justCreated }: {
   txId: string;
-  tasks: DealTask[];
+  openCount: number;
+  overdueCount: number;
   managers: DealManagers;
-  defaultOpen: boolean;
+  justCreated: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [items, setDone] = useOptimistic(sortSetupTasks(tasks), (list, { id, done }: { id: string; done: boolean }) =>
-    list.map((t) => (t.id === id ? { ...t, done } : t)),
-  );
-  const [, start] = useTransition();
-  const doneCount = items.filter((t) => t.done).length;
+  const [open, setOpen] = useState(false);
+  const seenKey = `deal-setup-reminder:${txId}`;
+
+  useEffect(() => {
+    if (openCount === 0) return;
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem(seenKey) === '1';
+    } catch {
+      /* storage blocked: just show it */
+    }
+    if (justCreated || (overdueCount > 0 && !seen)) setOpen(true);
+  }, [justCreated, openCount, overdueCount, seenKey]);
 
   const close = () => {
     setOpen(false);
-    // Drop ?setup=1 so a refresh doesn't reopen the popup.
+    try {
+      sessionStorage.setItem(seenKey, '1');
+    } catch {
+      /* ignore */
+    }
+    // Drop ?setup=1 so a refresh doesn't reopen it.
     const url = new URL(window.location.href);
     if (url.searchParams.has('setup')) {
       url.searchParams.delete('setup');
@@ -53,61 +65,31 @@ export function DealSetupDialog({ txId, tasks, managers, defaultOpen }: {
     }
   };
 
-  const toggle = (t: DealTask) =>
-    start(async () => {
-      setDone({ id: t.id, done: !t.done });
-      const r = await setDealTaskDone(txId, t.id, !t.done);
-      if (!r.ok) return void toast.error(r.error);
-      const allDone = items.every((x) => (x.id === t.id ? !t.done : x.done));
-      if (allDone) {
-        toast.success('Deal setup complete');
-        close();
-      }
-    });
-
-  if (items.length === 0) return null;
+  const tasksWord = openCount === 1 ? 'task' : 'tasks';
+  const message = overdueCount > 0
+    ? `${overdueCount} of the deal setup ${tasksWord} ${overdueCount === 1 ? 'is' : 'are'} overdue.`
+    : `This deal has ${openCount} setup ${tasksWord} to complete.`;
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => (o ? setOpen(true) : close())}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs" />
-        <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-popover p-5 text-popover-foreground ring-1 ring-foreground/10 outline-none">
+        <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-popover p-5 text-popover-foreground ring-1 ring-foreground/10 outline-none">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <DialogPrimitive.Title className="flex items-center gap-2 text-base font-semibold">
-                <ClipboardCheck className="size-4 text-primary" aria-hidden /> Complete the deal setup
-              </DialogPrimitive.Title>
-              <DialogPrimitive.Description className="mt-1 text-sm text-muted-foreground">
-                Tick each task when it's done. {doneCount} of {items.length} done.
-              </DialogPrimitive.Description>
-            </div>
+            <DialogPrimitive.Title className="flex items-center gap-2 text-base font-semibold">
+              <BellRing className="size-4 text-amber-500" aria-hidden /> Reminder: complete the deal setup
+            </DialogPrimitive.Title>
             <DialogPrimitive.Close aria-label="Close" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
               <X className="size-4" />
             </DialogPrimitive.Close>
           </div>
-
-          <ol className="mt-4 divide-y rounded-lg border">
-            {items.map((t, i) => (
-              <li key={t.id}>
-                <label className="flex cursor-pointer items-center gap-3 px-3 py-3 text-sm hover:bg-muted/50">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums">{i + 1}</span>
-                  <span className={cn('flex-1', t.done && 'text-muted-foreground line-through')}>{t.title}</span>
-                  <input
-                    type="checkbox"
-                    className="size-5 shrink-0 accent-primary"
-                    checked={t.done}
-                    onChange={() => toggle(t)}
-                    aria-label={`Mark "${t.title}" ${t.done ? 'not done' : 'done'}`}
-                  />
-                </label>
-              </li>
-            ))}
-          </ol>
-
-          <p className="mt-3 text-xs text-muted-foreground">Assigned to {managersLabel(managers)}</p>
-
-          <div className="mt-4 flex justify-end">
-            <Button type="button" variant="outline" onClick={close}>{doneCount === items.length ? 'Done' : 'Finish later'}</Button>
+          <DialogPrimitive.Description className="mt-2 text-sm">
+            {message} Complete them on the <strong>Tasks</strong> tab.
+          </DialogPrimitive.Description>
+          <p className="mt-2 text-xs text-muted-foreground">Assigned to {managersLabel(managers)}</p>
+          <div className="mt-5 flex justify-end gap-2">
+            <DialogPrimitive.Close className={buttonVariants({ variant: 'outline' })}>Later</DialogPrimitive.Close>
+            <Link href="?tab=tasks" scroll={false} onClick={close} className={buttonVariants()}>Go to tasks</Link>
           </div>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>

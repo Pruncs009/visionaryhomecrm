@@ -119,9 +119,16 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   return (
     <div className="mx-auto max-w-[1500px] space-y-4">
       <NavHighlight href={stageHref(tx.deal_stage)} />
-      <Link href={stageHref(tx.deal_stage)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" aria-hidden /> {DEAL_STAGE[tx.deal_stage].label}
-      </Link>
+      {/* Back to the stage on the left, deal actions on the right */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link href={stageHref(tx.deal_stage)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" aria-hidden /> {DEAL_STAGE[tx.deal_stage].label}
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={editHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil /> Edit deal</Link>
+          {canDelete && <DeleteTransactionButton id={tx.id} name={tx.name} />}
+        </div>
+      </div>
 
       {/* ---- Header ------------------------------------------------------------ */}
       <header className="flex flex-col gap-5 rounded-xl border bg-card p-5 xl:flex-row xl:items-start">
@@ -185,7 +192,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               <EmdInSelect key={`emd-in-${tx.emd_in}`} id={tx.id} value={tx.emd_in} />
             </div>
           </div>
-          <div className="space-y-3 sm:row-span-2">
+          <div className="space-y-3">
             <DealHeaderField key={`lm-${tx.lead_manager ?? ""}`} id={tx.id} field="lead_manager" value={tx.lead_manager} placeholder="Name" />
             <DealHeaderField key={`am-${tx.acquisition_manager ?? ""}`} id={tx.id} field="acquisition_manager" value={tx.acquisition_manager} placeholder="Name" />
             <div className="space-y-1">
@@ -193,10 +200,6 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               {/* key: reset the optimistic value when the server data changes */}
               <DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} />
             </div>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <Link href={editHref} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Pencil /> Edit deal</Link>
-            {canDelete && <DeleteTransactionButton id={tx.id} name={tx.name} />}
           </div>
         </div>
       </header>

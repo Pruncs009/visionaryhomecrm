@@ -18,14 +18,14 @@ export function DealStageBadge({ stage, className }: { stage: DealStage; classNa
 }
 
 /** Stage dropdown on the deal page: saves immediately, sidebar counts update. */
-export function DealStageSelect({ id, stage }: { id: string; stage: DealStage }) {
+export function DealStageSelect({ id, stage, className }: { id: string; stage: DealStage; className?: string }) {
   const [pending, start] = useTransition();
   const [value, setValue] = useOptimistic(stage);
   return (
     <NativeSelect
       id="deal-stage"
       aria-label="Deal stage"
-      className="w-full"
+      className={cn('w-full', className)}
       value={value}
       disabled={pending}
       onChange={(e) => {

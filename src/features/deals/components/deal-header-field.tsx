@@ -158,6 +158,12 @@ export function DealHeaderField({
 
   return (
     <div className={cn('space-y-1', className)}>
+      {/* First, so the hidden list doesn't add spacing under the box */}
+      {suggestions && (
+        <datalist id={listId}>
+          {suggestions.map((s) => <option key={s} value={s} />)}
+        </datalist>
+      )}
       <label htmlFor={inputId} title={LABEL[field]} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>
         {fitLabel ? <FitText max={11} min={8}>{LABEL[field]}</FitText> : LABEL[field]}
       </label>
@@ -197,11 +203,6 @@ export function DealHeaderField({
         }}
         className={cn(isMoney && 'tabular-nums', inputClassName)}
       />
-      )}
-      {suggestions && (
-        <datalist id={listId}>
-          {suggestions.map((s) => <option key={s} value={s} />)}
-        </datalist>
       )}
     </div>
   );

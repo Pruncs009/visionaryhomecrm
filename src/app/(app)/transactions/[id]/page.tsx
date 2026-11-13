@@ -176,9 +176,6 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               <ChoiceField key={`oc-${tx.occupancy ?? ''}`} id={tx.id} field="occupancy" value={tx.occupancy} options={OCCUPANCY_OPTIONS} othersPlaceholder="Enter occupancy" />
               <ChoiceField key={`ow-${tx.ownership_type ?? ''}`} id={tx.id} field="ownership_type" value={tx.ownership_type} options={OWNERSHIP_TYPES} allowOthers={false} />
               <DealHeaderField key={`et-${tx.ethnicity ?? ''}`} id={tx.id} field="ethnicity" value={tx.ethnicity} placeholder="Enter ethnicity" multiline />
-              <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
-              <ChoiceField key={`ch-${tx.channel ?? ''}`} id={tx.id} field="channel" value={tx.channel} options={CHANNELS} othersPlaceholder="Enter channel" />
-              <DealHeaderField key={`dt-${tx.deal_type ?? ''}`} id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
             </div>
           </div>
         </div>
@@ -191,14 +188,22 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               <DealHeaderField key={`emd-${tx.earnest_money ?? ''}`} id={tx.id} field="earnest_money" value={tx.earnest_money} />
               <EmdInSelect key={`emd-in-${tx.emd_in}`} id={tx.id} value={tx.emd_in} />
             </div>
+            <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
           </div>
           <div className="space-y-3">
             <DealHeaderField key={`lm-${tx.lead_manager ?? ""}`} id={tx.id} field="lead_manager" value={tx.lead_manager} placeholder="Name" />
             <DealHeaderField key={`am-${tx.acquisition_manager ?? ""}`} id={tx.id} field="acquisition_manager" value={tx.acquisition_manager} placeholder="Name" />
+            <DealHeaderField key={`dt-${tx.deal_type ?? ''}`} id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
+            <ChoiceField key={`ch-${tx.channel ?? ''}`} id={tx.id} field="channel" value={tx.channel} options={CHANNELS} othersPlaceholder="Enter channel" />
             <div className="space-y-1">
               <label htmlFor="deal-stage" className="block text-xs text-muted-foreground">Status</label>
-              {/* key: reset the optimistic value when the server data changes */}
-              <DealStageSelect key={tx.deal_stage} id={tx.id} stage={tx.deal_stage} />
+              {/* key: reset the optimistic value when the server data changes. Bold yellow so the stage stands out. */}
+              <DealStageSelect
+                key={tx.deal_stage}
+                id={tx.id}
+                stage={tx.deal_stage}
+                className="font-bold text-yellow-600 dark:text-yellow-400 [&_option]:font-normal [&_option]:text-foreground"
+              />
             </div>
           </div>
         </div>

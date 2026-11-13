@@ -3,7 +3,6 @@ import { Handshake } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, formatCurrency } from '@/lib/utils';
-import { TX_SIDE } from '../constants';
 import type { TransactionFilters } from '../schemas';
 import type { TransactionListResult } from '../types';
 import { DealStageBadge } from '@/features/deals/components/deal-stage';
@@ -46,6 +45,9 @@ export function TransactionsTable({
     );
   }
 
+  const date = (d: string) => formatDateOnly(d, { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+  // Columns: Property · Stage · Buyer · Seller · Purchase price · Ratified date · Close date
   return (
     <div className="rounded-xl ring-1 ring-foreground/10">
       <Table>
@@ -53,36 +55,42 @@ export function TransactionsTable({
           <TableRow>
             <TableHead className="pl-4">Property</TableHead>
             <TableHead>Stage</TableHead>
-            <TableHead className="hidden md:table-cell">Buyer / Seller</TableHead>
-            <TableHead className="hidden lg:table-cell">Price</TableHead>
-            <TableHead className="hidden sm:table-cell">Agent</TableHead>
-            <TableHead>Closing</TableHead>
+            <TableHead className="hidden md:table-cell">Buyer</TableHead>
+            <TableHead className="hidden md:table-cell">Seller</TableHead>
+            <TableHead className="hidden text-right lg:table-cell">Purchase price</TableHead>
+            <TableHead className="hidden sm:table-cell">Ratified date</TableHead>
+            <TableHead className="pr-4">Close date</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {result.rows.map((t) => {
             const days = t.closing_date ? daysUntil(t.closing_date, timezone) : null;
             const active = t.status !== 'closed' && t.status !== 'cancelled';
-            const price = t.sale_price ?? t.offer_price;
             return (
               <TableRow key={t.id}>
                 <TableCell className="max-w-72 pl-4">
-                  <Link href={`/transactions/${t.id}`} className="block truncate font-medium hover:underline">{t.name}</Link>
+                  <Link href={`/transactions/${t.id}`} className="block truncate font-medium hover:underline">{t.property_address || t.name}</Link>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {[t.property_city, t.property_state].filter(Boolean).join(', ')} · {TX_SIDE[t.side]}
+                    {[t.property_city, t.property_state].filter(Boolean).join(', ')}
                   </span>
                 </TableCell>
                 <TableCell><DealStageBadge stage={t.deal_stage} /></TableCell>
-                <TableCell className="hidden max-w-56 md:table-cell">
-                  <span className="block truncate">{t.buyer_name ?? '—'}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{t.seller_name ?? '—'}</span>
+                <TableCell className="hidden max-w-48 md:table-cell">
+                  {t.buyer_name ? <span className="block truncate">{t.buyer_name}</span> : <span className="text-muted-foreground">—</span>}
                 </TableCell>
-                <TableCell className="hidden tabular-nums lg:table-cell">{price !== null ? formatCurrency(price) : '—'}</TableCell>
-                <TableCell className="hidden sm:table-cell">{t.agent_name ?? <span className="text-muted-foreground">Unassigned</span>}</TableCell>
-                <TableCell className="whitespace-nowrap">
+                <TableCell className="hidden max-w-48 md:table-cell">
+                  {t.seller_name ? <span className="block truncate">{t.seller_name}</span> : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="hidden text-right tabular-nums lg:table-cell">
+                  {t.purchase_price !== null ? formatCurrency(t.purchase_price) : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="hidden whitespace-nowrap tabular-nums sm:table-cell">
+                  {t.contract_date ? date(t.contract_date) : <span className="text-muted-foreground">Not set</span>}
+                </TableCell>
+                <TableCell className="pr-4 whitespace-nowrap">
                   {t.closing_date ? (
                     <>
-                      <span className="block tabular-nums">{formatDateOnly(t.closing_date, { month: 'short', day: 'numeric' })}</span>
+                      <span className="block tabular-nums">{date(t.closing_date)}</span>
                       {active && days !== null && (
                         <span className={cn('block text-xs', days < 0 ? 'font-medium text-critical' : days <= 7 ? 'font-medium text-foreground' : 'text-muted-foreground')}>
                           {days < 0 ? `Overdue · ${relativeDays(days)}` : relativeDays(days)}

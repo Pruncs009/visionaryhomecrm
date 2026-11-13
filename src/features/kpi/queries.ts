@@ -1,9 +1,10 @@
 import 'server-only';
-import { kpiCsvUrl } from './sheet-config';
+import { FALLBACK_QUARTER_TABS, kpiCsvUrlFor, kpiTabsUrl } from './sheet-config';
 import {
   attainment,
   lastWeekIndex,
   parseKpiSheet,
+  quarterActual as quarterActualOf,
   quarterStanding,
   standing,
   weekStanding,
@@ -40,10 +41,34 @@ export type KpiReport = {
 
 const sumOrNull = (xs: (number | null)[]) => (xs.some((x) => x !== null) ? xs.reduce<number>((a, b) => a + (b ?? 0), 0) : null);
 
-export async function getKpiReport(): Promise<KpiReport> {
+export type QuarterTab = { quarter: number; year: number; gid: string };
+
+/**
+ * The sheet's quarter tabs ("Q1 - 2026", "Q4 - 2025 | NEW" …), read from Google's
+ * public tab list so new quarters appear without a code change.
+ */
+export async function getQuarterTabs(): Promise<QuarterTab[]> {
+  try {
+    const res = await fetch(kpiTabsUrl, { next: { revalidate: 600 } });
+    if (!res.ok) throw new Error(String(res.status));
+    const html = await res.text();
+    const tabs: QuarterTab[] = [];
+    for (const m of html.matchAll(/\{name: "Q([1-4])\s*-\s*(\d{4})([^"]*)",[^}]*?gid: "(\d+)"/g)) {
+      // Skip side tabs such as "Q4 - 2026 (GNAAC FUNNEL)".
+      if (/\(/.test(m[3])) continue;
+      tabs.push({ quarter: Number(m[1]), year: Number(m[2]), gid: m[4] });
+    }
+    if (tabs.length) return tabs;
+  } catch (e) {
+    console.error('[kpi] tab list', e);
+  }
+  return FALLBACK_QUARTER_TABS;
+}
+
+export async function getKpiReport(gid: string): Promise<KpiReport> {
   // The sheet is viewable by anyone with the link, so its CSV export needs no sign-in.
   // Re-read at most once a minute.
-  const res = await fetch(kpiCsvUrl, { next: { revalidate: 60 } });
+  const res = await fetch(kpiCsvUrlFor(gid), { next: { revalidate: 60 } });
   const type = res.headers.get('content-type') ?? '';
   if (!res.ok || !type.includes('text/csv')) {
     throw new Error(
@@ -112,6 +137,50 @@ export async function getKpiReport(): Promise<KpiReport> {
     counts,
     fetchedAt: new Date().toISOString(),
   };
+}
+
+/** Headline numbers of one quarter, for the side-by-side comparison. */
+export type QuarterSummary = {
+  quarter: number;
+  year: number;
+  /** Weeks with revenue entered / weeks in the quarter. */
+  weeksIn: number;
+  weeksTotal: number;
+  rows: Record<string, number | null>;
+};
+
+export const COMPARISON_ROWS: { key: string; label: string; unit: 'money' | 'percent' | 'number'; match?: RegExp; lowerIsBetter?: boolean }[] = [
+  { key: 'revenue', label: 'Closed revenue', unit: 'money' },
+  { key: 'target', label: 'Revenue target', unit: 'money' },
+  { key: 'attainment', label: 'Revenue vs target', unit: 'percent' },
+  // The sheet tracked net profit in $ (Q1–Q2 2026) and later as a margin %; keep them apart.
+  { key: 'profitUsd', label: 'Net profit ($)', unit: 'money', match: /^net profit/i },
+  { key: 'profit', label: 'Net profit margin', unit: 'percent', match: /^net profit/i },
+  { key: 'gross', label: 'Seller gross leads', unit: 'number', match: /^seller gross leads/i },
+  { key: 'qualified', label: 'Seller qualified leads', unit: 'number', match: /^seller qualified leads/i },
+  { key: 'appts', label: 'Appointments set', unit: 'number', match: /^appointments set/i },
+  { key: 'sent', label: 'Contracts sent', unit: 'number', match: /^contracts sent/i },
+  { key: 'signed', label: 'Contracts signed', unit: 'number', match: /^contracts signed/i },
+  { key: 'ratified', label: 'Ratified contracts (agent outreach)', unit: 'number', match: /^ratified contract/i },
+  { key: 'closings', label: 'Net closings', unit: 'number', match: /^net closings/i },
+  { key: 'bump', label: 'Average price bump', unit: 'money', match: /^average price bump/i },
+  { key: 'dm', label: 'DM spend', unit: 'money', match: /^amount spent dm/i },
+  { key: 'ppc', label: 'PPC spend', unit: 'money', match: /^amount spent ppc/i },
+];
+
+export function summarize(r: KpiReport, tab: QuarterTab): QuarterSummary {
+  const rows: Record<string, number | null> = {
+    revenue: r.revenue.quarterActual,
+    target: r.revenue.quarterTarget,
+    attainment: r.revenue.quarterActual !== null && r.revenue.quarterTarget ? (r.revenue.quarterActual / r.revenue.quarterTarget) * 100 : null,
+  };
+  for (const row of COMPARISON_ROWS) {
+    if (!row.match) continue;
+    // Only a metric kept in the row's unit (a $ number never lands in a % row).
+    const m = r.metrics.find((x) => row.match!.test(x.name) && (x.unit === row.unit || (x.unit === 'number' && row.unit !== 'percent')));
+    rows[row.key] = m ? quarterActualOf(m) : null;
+  }
+  return { quarter: tab.quarter, year: tab.year, weeksIn: r.currentWeek + 1, weeksTotal: r.sheet.weeks.length, rows };
 }
 
 /** Find a metric by name (first match), e.g. find(report, /contracts signed/i). */

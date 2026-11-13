@@ -74,8 +74,9 @@ function Tile({ title, icon: Icon, value, children }: { title: string; icon: Luc
 }
 
 // ----------------------------------------------------------------------------- report
-export function KpiReportView({ r }: { r: KpiReport }) {
+export function KpiReportView({ r, label, children }: { r: KpiReport; /** "Q3" */ label: string; /** Shown after the headline numbers (the quarter comparison). */ children?: React.ReactNode }) {
   const wk = r.currentWeek >= 0 ? r.sheet.weeks[r.currentWeek] : null;
+  const complete = r.currentWeek + 1 >= r.sheet.weeks.length;
   const rev = r.revenue;
   const profit = findMetric(r, /^net profit/i);
 
@@ -109,13 +110,13 @@ export function KpiReportView({ r }: { r: KpiReport }) {
     <div className="space-y-6">
       {/* Headline numbers */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
-        <Tile title="Closed revenue this quarter" icon={CircleDollarSign} value={fmt(rev.quarterActual, 'money')}>
+        <Tile title={`Closed revenue ${label}${complete ? '' : ' to date'}`} icon={CircleDollarSign} value={fmt(rev.quarterActual, 'money')}>
           {rev.quarterActual !== null && rev.quarterTarget ? (
             <>
               <Progress value={rev.quarterActual / rev.quarterTarget} marker={rev.expectedByNow !== null ? rev.expectedByNow / rev.quarterTarget : null} label={`${pct(rev.quarterActual / rev.quarterTarget)} of the quarterly target`} />
               <p>
                 {pct(rev.quarterActual / rev.quarterTarget)} of the {fmt(rev.quarterTarget, 'money', { compact: true })} quarterly target.
-                {rev.expectedByNow !== null && wk && <> On pace would be {fmt(rev.expectedByNow, 'money', { compact: true })} by {wk.code}.</>}
+                {!complete && rev.expectedByNow !== null && wk && <> On pace would be {fmt(rev.expectedByNow, 'money', { compact: true })} by {wk.code}.</>}
               </p>
             </>
           ) : (
@@ -136,7 +137,7 @@ export function KpiReportView({ r }: { r: KpiReport }) {
           </p>
           {r.pending.undated > 0 && <p className="text-amber-700 dark:text-amber-300">{r.pending.undated} without a close date</p>}
         </Tile>
-        <Tile title={profit ? 'Net profit margin' : 'Net profit'} icon={Percent} value={profit?.week.value ? fmt(profit.week.value.num, profit.unit) : '—'}>
+        <Tile title={profit?.unit === 'percent' ? 'Net profit margin' : 'Net profit'} icon={Percent} value={profit?.week.value ? fmt(profit.week.value.num, profit.unit) : '—'}>
           {profit && (
             <p className="flex flex-wrap items-center gap-2">
               <StandingBadge s={profit.week.standing} />
@@ -146,6 +147,8 @@ export function KpiReportView({ r }: { r: KpiReport }) {
           )}
         </Tile>
       </div>
+
+      {children}
 
       {/* Scorecard summary */}
       <Card>
@@ -187,7 +190,7 @@ export function KpiReportView({ r }: { r: KpiReport }) {
       {/* Deal flow this quarter */}
       <Card>
         <CardHeader>
-          <CardTitle>Deal flow this quarter</CardTitle>
+          <CardTitle>Deal flow, {label}</CardTitle>
           <CardDescription>Quarter-to-date totals, from first lead to signed contract</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-8 md:grid-cols-2">

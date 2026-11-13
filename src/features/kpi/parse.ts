@@ -238,7 +238,8 @@ export function isCumulative(m: Metric): boolean {
 
 /** Quarter-to-date number: the sheet's quarterly cell, or the weeks added up (or averaged for rates). */
 export function quarterActual(m: Metric): number | null {
-  if (m.quarterActual.num !== null) return m.quarterActual.num;
+  // Use the sheet's own quarterly cell unless it's in another unit (e.g. $ profit in a % row).
+  if (m.quarterActual.num !== null && (m.quarterActual.unit === m.unit || m.quarterActual.unit === 'number')) return m.quarterActual.num;
   const nums = m.weeks.map((w) => w.num).filter((n): n is number => n !== null);
   if (!nums.length) return null;
   const sum = nums.reduce((a, b) => a + b, 0);

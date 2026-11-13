@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireContext } from '@/features/auth/guards';
 import { createClient } from '@/lib/supabase/server';
+import { BC_SETUP_TASKS } from '@/features/transactions/constants';
 import { DEAL_STAGE_VALUES } from './constants';
 
 const input = z.object({ id: z.string().uuid(), stage: z.enum(DEAL_STAGE_VALUES) });
@@ -12,12 +13,33 @@ const input = z.object({ id: z.string().uuid(), stage: z.enum(DEAL_STAGE_VALUES)
  * Move a deal to another stage. The database trigger keeps `status` in step
  * (Closed Deals → closed, Dead Deals → cancelled), so reports stay correct.
  */
-export async function updateDealStage(id: string, stage: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function updateDealStage(
+  id: string,
+  stage: string,
+): Promise<{ ok: true; copyId?: string } | { ok: false; error: string }> {
   const ctx = await requireContext();
   const parsed = input.safeParse({ id, stage });
   if (!parsed.success) return { ok: false, error: 'Invalid stage.' };
 
   const supabase = await createClient();
+
+  // A-B Closing → B-C Closing: the A-B deal stays put and a B-C copy is made.
+  if (parsed.data.stage === 'bc_closing') {
+    const { data: current } = await supabase
+      .from('transactions')
+      .select('deal_stage')
+      .eq('organization_id', ctx.organization.id)
+      .eq('id', parsed.data.id)
+      .is('deleted_at', null)
+      .maybeSingle();
+    if (current?.deal_stage === 'ab_closing') {
+      const r = await createBcCopy(ctx.organization.id, parsed.data.id, ctx.profile?.timezone || 'America/New_York');
+      if (!r.ok) return r;
+      revalidatePath('/', 'layout');
+      return { ok: true, copyId: r.id };
+    }
+  }
+
   const { data, error } = await supabase
     .from('transactions')
     .update({ deal_stage: parsed.data.stage })
@@ -34,6 +56,78 @@ export async function updateDealStage(id: string, stage: string): Promise<{ ok: 
   // Layout too: the sidebar counts change.
   revalidatePath('/', 'layout');
   return { ok: true };
+}
+
+/** Kept on the B-C copy: everything except prices, dates, parties and escrow. */
+const COPIED_COLUMNS = [
+  'name', 'side', 'property_id', 'agent_id',
+  'campaign_name', 'channel', 'deal_type', 'occupancy', 'ownership_type', 'ethnicity',
+  'lead_manager', 'acquisition_manager', 'transaction_coordinator',
+  'prop_last_sold_prior', 'prop_seller_age', 'prop_equity', 'prop_stories', 'prop_beds', 'prop_baths',
+  'prop_bldg_sqft', 'prop_lot_size', 'prop_year_built', 'prop_county',
+  'contingency_type', 'occupancy_strategy', 'lockbox_code', 'arv_estimate', 'rehab_estimate', 'photos_link',
+] as const;
+
+/**
+ * Make the B-C deal from an A-B deal: same property, header, team members and
+ * deal details; blank purchase price, EMD, dates, buyer/seller, collaborators
+ * and escrow type/#; plus the B-C setup checklist. If a B-C copy already exists
+ * for this deal, that one is returned instead of making another.
+ */
+async function createBcCopy(orgId: string, sourceId: string, timezone: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('source_transaction_id', sourceId)
+    .eq('deal_stage', 'bc_closing')
+    .is('deleted_at', null)
+    .limit(1);
+  if (existing?.[0]) return { ok: true, id: existing[0].id as string };
+
+  const { data: src, error: srcError } = await supabase
+    .from('transactions')
+    .select(COPIED_COLUMNS.join(', '))
+    .eq('organization_id', orgId)
+    .eq('id', sourceId)
+    .maybeSingle();
+  if (srcError || !src) {
+    if (srcError) console.error('[deals] could not read deal to copy', srcError);
+    return { ok: false, error: 'This deal no longer exists.' };
+  }
+
+  const { data: copy, error } = await supabase
+    .from('transactions')
+    .insert({
+      ...(src as unknown as Record<string, unknown>),
+      organization_id: orgId,
+      status: 'under_contract',
+      deal_stage: 'bc_closing',
+      source_transaction_id: sourceId,
+    })
+    .select('id')
+    .single();
+  if (error || !copy) {
+    console.error('[deals] could not create B-C copy', error);
+    return { ok: false, error: error?.code === '42501' ? "You don't have permission to do that." : 'Could not create the B-C deal. Please try again.' };
+  }
+  const id = copy.id as string;
+
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+  const { error: taskError } = await supabase.from('tasks').insert(
+    BC_SETUP_TASKS.map((title) => ({
+      organization_id: orgId,
+      transaction_id: id,
+      title,
+      priority: 'high' as const,
+      due_at: `${today}T12:00:00Z`,
+      kind: 'deal_setup',
+      assignee_role: 'lead_acquisition',
+    })),
+  );
+  if (taskError) console.error('[deals] could not add B-C setup tasks', taskError);
+  return { ok: true, id };
 }
 
 // -----------------------------------------------------------------------------

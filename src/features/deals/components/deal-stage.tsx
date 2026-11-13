@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useOptimistic, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ export function DealStageBadge({ stage, className }: { stage: DealStage; classNa
 
 /** Stage dropdown on the deal page: saves immediately, sidebar counts update. */
 export function DealStageSelect({ id, stage, className }: { id: string; stage: DealStage; className?: string }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [value, setValue] = useOptimistic(stage);
   return (
@@ -33,8 +35,14 @@ export function DealStageSelect({ id, stage, className }: { id: string; stage: D
         start(async () => {
           setValue(next);
           const r = await updateDealStage(id, next);
-          if (r.ok) toast.success(`Moved to ${DEAL_STAGE[next].label}`);
-          else toast.error(r.error);
+          if (!r.ok) return void toast.error(r.error);
+          if (r.copyId) {
+            // A-B → B-C: this deal stays in A-B Closing; open the new B-C deal.
+            toast.success('B-C deal created. This A-B deal stays in A-B Closing.');
+            router.push(`/transactions/${r.copyId}?setup=1`);
+            return;
+          }
+          toast.success(`Moved to ${DEAL_STAGE[next].label}`);
         });
       }}
     >

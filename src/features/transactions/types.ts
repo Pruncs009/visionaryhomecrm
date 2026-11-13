@@ -72,6 +72,8 @@ export type TransactionRow = {
   bc_purchase_price: number | null;
   bc_earnest_money: number | null;
   bc_emd_in: boolean | null;
+  /** The A-B deal this B-C copy was made from. */
+  source_transaction_id: string | null;
 };
 
 export type TransactionListResult = {

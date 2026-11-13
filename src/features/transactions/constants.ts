@@ -96,3 +96,11 @@ export const DEAL_SETUP_TASKS = [
   'Enter deal type and channel',
   'Enter occupancy, owner (if known) and ethnicity (if known)',
 ] as const;
+
+/** Checklist added to the B-C copy made when an A-B deal moves to B-C Closing. */
+export const BC_SETUP_TASKS = [
+  'Enter new purchase price and EMD',
+  'Verify new ratified date and closing date',
+  "Enter buyer's and seller's names",
+  'Enter escrow type',
+] as const;

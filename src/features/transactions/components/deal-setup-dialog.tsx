@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { BellRing, X } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import { DEAL_SETUP_TASKS } from '../constants';
+import { BC_SETUP_TASKS, DEAL_SETUP_TASKS } from '../constants';
 
 export type DealManagers = { lead: string | null; acquisition: string | null };
 
@@ -13,7 +13,9 @@ export type DealManagers = { lead: string | null; acquisition: string | null };
 export function sortSetupTasks<T extends { title: string }>(tasks: T[]): T[] {
   const order = (t: T) => {
     const i = (DEAL_SETUP_TASKS as readonly string[]).indexOf(t.title);
-    return i === -1 ? 99 : i;
+    if (i !== -1) return i;
+    const j = (BC_SETUP_TASKS as readonly string[]).indexOf(t.title);
+    return j === -1 ? 99 : j;
   };
   return [...tasks].sort((a, b) => order(a) - order(b));
 }

@@ -154,6 +154,11 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-semibold tracking-wide text-primary uppercase">{SIDE_BADGE[tx.side]}</span>
               <span className="text-muted-foreground">{TX_SIDE[tx.side]}{prop?.propertyType ? ` ·${label(prop.propertyType)}` : ''}</span>
+              {tx.source_transaction_id && (
+                <Link href={`/transactions/${tx.source_transaction_id}`} className="font-medium text-primary hover:underline">
+                  · From A-B deal →
+                </Link>
+              )}
             </div>
             {/* Full address on one line */}
             <h1 className="text-2xl font-semibold tracking-tight break-words">

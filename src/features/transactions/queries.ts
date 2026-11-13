@@ -52,6 +52,7 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     bc_purchase_price: num(r.bc_purchase_price),
     bc_earnest_money: num(r.bc_earnest_money),
     bc_emd_in: typeof r.bc_emd_in === 'boolean' ? r.bc_emd_in : null,
+    source_transaction_id: (r.source_transaction_id as string | null) ?? null,
   };
 }
 

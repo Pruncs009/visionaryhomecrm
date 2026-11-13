@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { requireContext } from '@/features/auth/guards';
 import type { ActionState } from '@/features/auth/types';
 import { createClient } from '@/lib/supabase/server';
+import { getTransaction } from './queries';
+import { taskBlocker } from './task-requirements';
 import type { DealNote } from './types';
 
 export type MutationResult = { ok: true } | { ok: false; error: string };
@@ -66,8 +68,24 @@ export async function addDealTask(txId: string, _prev: ActionState, formData: Fo
 
 export async function setDealTaskDone(txId: string, taskId: string, done: boolean): Promise<MutationResult> {
   const ctx = await requireContext();
-  if (!uuid.safeParse(taskId).success) return { ok: false, error: 'Task not found.' };
+  if (!uuid.safeParse(taskId).success || !uuid.safeParse(txId).success) return { ok: false, error: 'Task not found.' };
   const supabase = await createClient();
+
+  // Checklist tasks can only be completed once their information is on the deal.
+  if (done) {
+    const [{ data: task }, tx, { data: parties }] = await Promise.all([
+      supabase.from('tasks').select('title, kind').eq('organization_id', ctx.organization.id).eq('transaction_id', txId).eq('id', taskId).maybeSingle(),
+      getTransaction(ctx.organization.id, txId),
+      supabase.from('deal_parties').select('role').eq('organization_id', ctx.organization.id).eq('transaction_id', txId),
+    ]);
+    if (!task || !tx) return { ok: false, error: 'Task not found.' };
+    const blocker = taskBlocker(
+      { title: task.title as string, kind: (task.kind as string | null) ?? null },
+      { tx, partyRoles: (parties ?? []).map((p) => p.role as string) },
+    );
+    if (blocker) return { ok: false, error: blocker };
+  }
+
   const { error } = await supabase
     .from('tasks')
     .update({ status: done ? 'done' : 'todo' })

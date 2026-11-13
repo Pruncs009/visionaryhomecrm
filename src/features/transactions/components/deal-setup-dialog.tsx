@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { BellRing, X } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
@@ -45,6 +45,7 @@ export function DealSetupReminder({ txId, openCount, overdueCount, lmOpenCount =
   managers: DealManagers;
   justCreated: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const seenKey = `deal-setup-reminder:${txId}`;
 
@@ -66,12 +67,10 @@ export function DealSetupReminder({ txId, openCount, overdueCount, lmOpenCount =
     } catch {
       /* ignore */
     }
-    // Drop ?setup=1 so a refresh doesn't reopen it.
-    const url = new URL(window.location.href);
-    if (url.searchParams.has('setup')) {
-      url.searchParams.delete('setup');
-      window.history.replaceState(window.history.state, '', url);
-    }
+    // Either way, go to the Tasks tab, on Overdue when something is overdue
+    // (this also drops ?setup=1 so a refresh doesn't reopen the popup).
+    const anyOverdue = overdueCount > 0 || lmOverdueCount > 0;
+    router.replace(anyOverdue ? '?tab=tasks&tasks=overdue' : '?tab=tasks', { scroll: false });
   };
 
   const tasksWord = openCount === 1 ? 'task' : 'tasks';
@@ -115,7 +114,7 @@ export function DealSetupReminder({ txId, openCount, overdueCount, lmOpenCount =
           </DialogPrimitive.Description>
           <div className="mt-5 flex justify-end gap-2">
             <DialogPrimitive.Close className={buttonVariants({ variant: 'outline' })}>Later</DialogPrimitive.Close>
-            <Link href="?tab=tasks" scroll={false} onClick={close} className={buttonVariants()}>Go to tasks</Link>
+            <button type="button" onClick={close} className={buttonVariants()}>Go to tasks</button>
           </div>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>

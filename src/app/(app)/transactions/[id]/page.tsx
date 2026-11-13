@@ -15,6 +15,7 @@ import { AddPersonMenu, EMPTY_DETAILS, type TeamNames } from '@/features/transac
 import { isClientRole, isSingleSlotRole, PARTY_ROLE_LABEL, TEAM_ROLE_LABEL, TEAM_ROLES, type DealParty, type PartyRole } from '@/features/transactions/parties';
 import { DealTasks } from '@/features/transactions/components/deal-tasks';
 import { DealSetupReminder } from '@/features/transactions/components/deal-setup-dialog';
+import { isOverdue, taskBlocker } from '@/features/transactions/task-requirements';
 import { daysUntil, formatDateOnly, relativeDays } from '@/features/transactions/components/tx-bits';
 import { DealStageSelect } from '@/features/deals/components/deal-stage';
 import { DEAL_STAGE, stageHref } from '@/features/deals/constants';
@@ -40,7 +41,7 @@ type TabKey = (typeof TABS)[number]['key'];
 
 const SIDE_BADGE: Record<TransactionRow['side'], string> = { buyer: 'Buyer', seller: 'Seller', dual: 'Dual' };
 
-type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; setup?: string }> };
+type PageProps = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string; setup?: string; tasks?: string }> };
 
 export default async function TransactionDetailPage({ params, searchParams }: PageProps) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
@@ -92,6 +93,14 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   const splitDeal = isSplitDeal(tx);
   const setupTasks = ws.tasks.filter((t) => t.kind === 'deal_setup');
   const lmTasks = ws.tasks.filter((t) => t.kind === 'lm_followup');
+  // Checklist tasks that can't be completed yet (their information isn't on the deal).
+  const facts = { tx, partyRoles: parties.map((p) => p.role as string) };
+  const taskBlockers = Object.fromEntries(
+    ws.tasks.flatMap((t) => {
+      const why = t.done ? null : taskBlocker(t, facts);
+      return why ? [[t.id, why]] : [];
+    }),
+  );
 
   const team: TeamNames = {
     transaction_coordinator: tx.transaction_coordinator,
@@ -130,9 +139,9 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
       <DealSetupReminder
         txId={tx.id}
         openCount={setupTasks.filter((t) => !t.done).length}
-        overdueCount={setupTasks.filter((t) => !t.done && t.dueDate !== null && t.dueDate < today).length}
+        overdueCount={setupTasks.filter((t) => isOverdue(t, today)).length}
         lmOpenCount={lmTasks.filter((t) => !t.done).length}
-        lmOverdueCount={lmTasks.filter((t) => !t.done && t.dueDate !== null && t.dueDate < today).length}
+        lmOverdueCount={lmTasks.filter((t) => isOverdue(t, today)).length}
         lmDueDate={lmTasks.find((t) => !t.done)?.dueDate ?? null}
         managers={managers}
         justCreated={sp.setup === '1'}
@@ -282,7 +291,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
             })}
           </nav>
           <div className="p-5">
-            {tab === 'tasks' && <DealTasks txId={tx.id} tasks={ws.tasks} members={members} today={today} canDelete={canDelete} managers={managers} />}
+            {tab === 'tasks' && <DealTasks txId={tx.id} tasks={ws.tasks} members={members} today={today} canDelete={canDelete} managers={managers} blockers={taskBlockers} initialFilter={sp.tasks === 'overdue' || sp.tasks === 'upcoming' || sp.tasks === 'completed' ? sp.tasks : null} />}
             {tab === 'notes' && <DealNotes txId={tx.id} notes={ws.notes} timezone={timezone} canDelete={canDelete} />}
             {tab === 'docs' && <DocumentsPanel orgId={org} transactionId={tx.id} files={files} timezone={timezone} canDelete={canDelete} />}
             {tab === 'details' && <Details tx={tx} ws={ws} editHref={editHref} />}

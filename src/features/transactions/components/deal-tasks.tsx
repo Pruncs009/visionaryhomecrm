@@ -2,14 +2,24 @@
 
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
-import { ClipboardCheck, Plus, Trash2, X } from 'lucide-react';
+import { ClipboardCheck, Lock, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import type { TeamMember } from '@/features/leads/types';
 import { cn } from '@/lib/utils';
 import { addDealTask, deleteDealTask, setDealTaskDone } from '../deal-actions';
+import { isOverdue } from '../task-requirements';
 import type { DealTask } from '../types';
 import { formatDateOnly } from './tx-bits';
 import { Initials } from './deal-people';
@@ -32,10 +42,8 @@ const PRIORITY: Record<DealTask['priority'], { label: string; className: string 
 
 function bucketOf(t: DealTask, today: string): Bucket {
   if (t.done) return 'completed';
-  if (!t.dueDate) return 'upcoming';
-  if (t.dueDate < today) return 'overdue';
-  // Due today or later (no separate "Due today" filter).
-  return 'upcoming';
+  // Past due; setup checklists count as overdue from the day the deal is created.
+  return isOverdue(t, today) ? 'overdue' : 'upcoming';
 }
 
 export function DealTasks({
@@ -45,6 +53,8 @@ export function DealTasks({
   today,
   canDelete,
   managers,
+  blockers = {},
+  initialFilter = null,
 }: {
   txId: string;
   tasks: DealTask[];
@@ -54,8 +64,17 @@ export function DealTasks({
   /** YYYY-MM-DD in the viewer's timezone */
   today: string;
   canDelete: boolean;
+  /** Task id → why it can't be completed yet (its information isn't on the deal). */
+  blockers?: Record<string, string>;
+  /** Filter to open on (?tasks=overdue from the setup reminder). */
+  initialFilter?: Bucket | null;
 }) {
-  const [filter, setFilter] = useState<Bucket | null>(null);
+  const [filter, setFilter] = useState<Bucket | null>(initialFilter);
+  const [blocked, setBlocked] = useState<{ title: string; why: string } | null>(null);
+  // Arriving again via the reminder (?tasks=overdue) switches to that filter.
+  useEffect(() => {
+    if (initialFilter) setFilter(initialFilter);
+  }, [initialFilter]);
   const [adding, setAdding] = useState(false);
   const [optimistic, setDone] = useOptimistic(tasks, (list, { id, done }: { id: string; done: boolean }) =>
     list.map((t) => (t.id === id ? { ...t, done } : t)),
@@ -150,13 +169,26 @@ export function DealTasks({
                 return (
                   <tr key={t.id} className="group border-b last:border-0">
                     <td className="py-2.5">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-primary"
-                        checked={t.done}
-                        onChange={() => toggle(t)}
-                        aria-label={`Mark "${t.title}" ${t.done ? 'not done' : 'done'}`}
-                      />
+                      {!t.done && blockers[t.id] ? (
+                        // Not done yet: no checkbox to tick, only the reason.
+                        <button
+                          type="button"
+                          onClick={() => setBlocked({ title: t.title, why: blockers[t.id] })}
+                          className="grid size-4 cursor-not-allowed place-items-center rounded-[3px] border border-foreground/25 bg-muted"
+                          aria-label={`Can't complete "${t.title}" yet: ${blockers[t.id]}`}
+                          title={blockers[t.id]}
+                        >
+                          <Lock className="size-2.5 text-muted-foreground" aria-hidden />
+                        </button>
+                      ) : (
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-primary"
+                          checked={t.done}
+                          onChange={() => toggle(t)}
+                          aria-label={`Mark "${t.title}" ${t.done ? 'not done' : 'done'}`}
+                        />
+                      )}
                     </td>
                     <td className={cn('py-2.5 pr-3', t.done && 'text-muted-foreground line-through')}>{t.title}</td>
                     <td className={cn('py-2.5 pr-3 whitespace-nowrap tabular-nums', t.bucket === 'overdue' && 'font-medium text-critical')}>
@@ -196,6 +228,21 @@ export function DealTasks({
           </table>
         </div>
       )}
+      <AlertDialog open={blocked !== null} onOpenChange={(o) => !o && setBlocked(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This task isn&apos;t done yet</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{blocked?.title}</strong>
+              <br />
+              {blocked?.why}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>OK</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

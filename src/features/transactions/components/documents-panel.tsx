@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
-import { Download, FileText, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
+import { Download, Eye, FileText, Image as ImageIcon, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import {
   ALLOWED_UPLOAD_TYPES, FILE_CATEGORY, FILE_CATEGORY_VALUES, MAX_UPLOAD_BYTES, STORAGE_BUCKET, transactionFilePath,
 } from '../constants';
 import type { TransactionFile } from '../types';
+import { FilePreview } from './file-preview';
 import { formatBytes } from './tx-bits';
 
 /**
@@ -42,6 +43,7 @@ export function DocumentsPanel({
   const [uploading, setUploading] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [, start] = useTransition();
+  const [previewing, setPreviewing] = useState<TransactionFile | null>(null);
   const when = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: timezone });
 
   async function upload(list: FileList | null) {
@@ -101,11 +103,22 @@ export function DocumentsPanel({
                 <li key={f.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                   <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{f.fileName}</p>
+                    {/* Click the name to view it in a window over the page */}
+                    <button
+                      type="button"
+                      onClick={() => setPreviewing(f)}
+                      title={`View ${f.fileName}`}
+                      className="block max-w-full truncate text-left text-sm font-medium text-primary hover:underline"
+                    >
+                      {f.fileName}
+                    </button>
                     <p className="text-xs text-muted-foreground">
                       {FILE_CATEGORY[f.category]} · {formatBytes(f.sizeBytes)} · {when.format(new Date(f.createdAt))}{f.uploaderName && ` · ${f.uploaderName}`}
                     </p>
                   </div>
+                  <Button variant="ghost" size="icon-sm" aria-label={`View ${f.fileName}`} title="View" onClick={() => setPreviewing(f)}>
+                    <Eye />
+                  </Button>
                   <Button variant="ghost" size="icon-sm" aria-label={`Download ${f.fileName}`}
                     onClick={() => start(async () => {
                       const r = await getFileDownloadUrl(f.id);
@@ -132,6 +145,7 @@ export function DocumentsPanel({
             })}
           </ul>
         )}
+        <FilePreview file={previewing} onClose={() => setPreviewing(null)} />
       </CardContent>
     </Card>
   );

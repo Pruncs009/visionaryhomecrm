@@ -267,6 +267,26 @@ export async function getFileDownloadUrl(fileId: string): Promise<{ ok: true; ur
   return { ok: true, url: data.signedUrl };
 }
 
+/**
+ * Short-lived (5 min) link to view a document inside the app (no "download"
+ * header, so PDFs and images open in the preview window).
+ */
+export async function getFilePreviewUrl(fileId: string): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const ctx = await requireContext();
+  if (!uuidSchema.safeParse(fileId).success) return { ok: false, error: 'File not found.' };
+  const supabase = await createClient();
+  const { data: file } = await supabase
+    .from('files')
+    .select('bucket_id, storage_path')
+    .eq('organization_id', ctx.organization.id)
+    .eq('id', fileId)
+    .maybeSingle();
+  if (!file) return { ok: false, error: 'File not found.' };
+  const { data, error } = await supabase.storage.from(file.bucket_id as string).createSignedUrl(file.storage_path as string, 300);
+  if (error || !data) return { ok: false, error: 'Could not open the file.' };
+  return { ok: true, url: data.signedUrl };
+}
+
 export async function deleteTransactionFile(transactionId: string, fileId: string): Promise<MutationResult> {
   const ctx = await requireContext();
   if (ctx.role === 'assistant') return { ok: false, error: 'Only agents and admins can delete documents.' };

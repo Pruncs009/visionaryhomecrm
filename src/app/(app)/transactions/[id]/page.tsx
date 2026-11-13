@@ -166,12 +166,12 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               })}
             </div>
             <div className="grid max-w-2xl gap-3 pt-2 sm:grid-cols-3">
-              <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
-              <ChoiceField key={`ch-${tx.channel ?? ''}`} id={tx.id} field="channel" value={tx.channel} options={CHANNELS} othersPlaceholder="Enter channel" />
-              <DealHeaderField key={`dt-${tx.deal_type ?? ''}`} id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
               <ChoiceField key={`oc-${tx.occupancy ?? ''}`} id={tx.id} field="occupancy" value={tx.occupancy} options={OCCUPANCY_OPTIONS} othersPlaceholder="Enter occupancy" />
               <ChoiceField key={`ow-${tx.ownership_type ?? ''}`} id={tx.id} field="ownership_type" value={tx.ownership_type} options={OWNERSHIP_TYPES} allowOthers={false} />
               <DealHeaderField key={`et-${tx.ethnicity ?? ''}`} id={tx.id} field="ethnicity" value={tx.ethnicity} placeholder="Enter ethnicity" multiline />
+              <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
+              <ChoiceField key={`ch-${tx.channel ?? ''}`} id={tx.id} field="channel" value={tx.channel} options={CHANNELS} othersPlaceholder="Enter channel" />
+              <DealHeaderField key={`dt-${tx.deal_type ?? ''}`} id={tx.id} field="deal_type" value={tx.deal_type} placeholder="e.g. Wholesale" suggestions={DEAL_TYPE_SUGGESTIONS} />
             </div>
           </div>
         </div>

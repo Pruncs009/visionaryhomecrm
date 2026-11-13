@@ -129,7 +129,7 @@ export function AddPersonMenu({ txId, takenRoles, people, team, teamOptions }: {
         <DropdownMenuTrigger aria-label="Add people" className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
           <Plus className="size-4" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-max! min-w-max whitespace-nowrap">
           <DropdownMenuItem onClick={() => setKind('client')}><UserRound /> Add client</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setKind('collaborator')}><Briefcase /> Add collaborator</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setKind('team')}><Users /> Add team member</DropdownMenuItem>

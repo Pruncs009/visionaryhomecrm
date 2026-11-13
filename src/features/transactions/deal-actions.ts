@@ -84,9 +84,10 @@ export async function deleteDealTask(txId: string, taskId: string): Promise<Muta
   if (!canDelete(ctx.role)) return { ok: false, error: 'Only agents and admins can delete tasks.' };
   if (!uuid.safeParse(taskId).success) return { ok: false, error: 'Task not found.' };
   const supabase = await createClient();
+  // Kept as a cancelled task so the Timeline can show when it was deleted.
   const { error } = await supabase
     .from('tasks')
-    .delete()
+    .update({ status: 'cancelled', deleted_at: new Date().toISOString() })
     .eq('organization_id', ctx.organization.id)
     .eq('transaction_id', txId)
     .eq('id', taskId);

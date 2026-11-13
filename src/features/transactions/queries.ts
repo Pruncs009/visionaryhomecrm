@@ -147,7 +147,7 @@ export async function getTransactionFiles(orgId: string, transactionId: string):
 export async function getDealWorkspace(orgId: string, tx: TransactionRow, timezone: string): Promise<DealWorkspace> {
   const supabase = await createClient();
   const contactIds = [tx.buyer_contact_id, tx.seller_contact_id].filter((x): x is string => !!x);
-  const [property, contacts, tasks, notes] = await Promise.all([
+  const [property, contacts, tasks, notes, deletedTasks] = await Promise.all([
     supabase
       .from('properties')
       .select('postal_code, mls_number, property_type, list_price, bedrooms, bathrooms, square_feet, year_built')
@@ -173,8 +173,17 @@ export async function getDealWorkspace(orgId: string, tx: TransactionRow, timezo
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(200),
+    // Deleted tasks (kept as cancelled) — only for the Timeline.
+    supabase
+      .from('tasks')
+      .select('id, title, deleted_at')
+      .eq('organization_id', orgId)
+      .eq('transaction_id', tx.id)
+      .eq('status', 'cancelled')
+      .not('deleted_at', 'is', null)
+      .limit(500),
   ]);
-  for (const r of [property, contacts, tasks, notes]) if (r.error) throw new Error(r.error.message);
+  for (const r of [property, contacts, tasks, notes, deletedTasks]) if (r.error) throw new Error(r.error.message);
 
   const dateInTz = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }); // YYYY-MM-DD
   const p = property.data as Record<string, unknown> | null;
@@ -204,6 +213,11 @@ export async function getDealWorkspace(orgId: string, tx: TransactionRow, timezo
       assignedTo: (t.assigned_to as string | null) ?? null,
       kind: (t.kind as string | null) ?? null,
       assigneeRole: (t.assignee_role as string | null) ?? null,
+    })),
+    deletedTasks: ((deletedTasks.data ?? []) as Record<string, unknown>[]).map((t) => ({
+      id: t.id as string,
+      title: t.title as string,
+      deletedAt: t.deleted_at as string,
     })),
     notes: ((notes.data ?? []) as Record<string, unknown>[]).map((n) => {
       const raw = n.author as unknown;

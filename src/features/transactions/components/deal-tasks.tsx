@@ -15,11 +15,10 @@ import { formatDateOnly } from './tx-bits';
 import { Initials } from './deal-people';
 import { managersLabel, sortSetupTasks, type DealManagers } from './deal-setup-dialog';
 
-type Bucket = 'overdue' | 'today' | 'upcoming' | 'completed';
+type Bucket = 'overdue' | 'upcoming' | 'completed';
 
 const BUCKETS: { key: Bucket; label: string; dot: string; ring: string }[] = [
   { key: 'overdue', label: 'Overdue', dot: 'bg-critical', ring: 'border-critical/40 text-critical' },
-  { key: 'today', label: 'Due today', dot: 'bg-amber-500', ring: 'border-amber-500/60 text-foreground' },
   { key: 'upcoming', label: 'Upcoming', dot: 'bg-success', ring: 'border-success/40 text-foreground' },
   { key: 'completed', label: 'Completed', dot: 'bg-primary', ring: 'border-primary/40 text-foreground' },
 ];
@@ -35,7 +34,7 @@ function bucketOf(t: DealTask, today: string): Bucket {
   if (t.done) return 'completed';
   if (!t.dueDate) return 'upcoming';
   if (t.dueDate < today) return 'overdue';
-  if (t.dueDate === today) return 'today';
+  // Due today or later (no separate "Due today" filter).
   return 'upcoming';
 }
 

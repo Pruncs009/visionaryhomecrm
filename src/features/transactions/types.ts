@@ -127,6 +127,8 @@ export type DealWorkspace = {
   } | null;
   contacts: Record<string, { email: string | null; phone: string | null }>;
   tasks: DealTask[];
+  /** Tasks deleted from the deal, for the Timeline. */
+  deletedTasks: { id: string; title: string; deletedAt: string }[];
   notes: DealNote[];
 };
 

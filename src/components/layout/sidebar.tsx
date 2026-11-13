@@ -35,7 +35,7 @@ export function Sidebar({ counts, deletedCount = 0 }: { counts: Partial<Record<D
   const highlight = useNavHighlight();
 
   return (
-    <aside className="hidden w-60 shrink-0 border-r p-4 md:block">
+    <aside className="hidden w-60 shrink-0 border-r border-brand-teal p-4 md:block">
       <Link href="/dashboard" className="mb-6 block px-3" aria-label="Visionary Home Offer — Dashboard">
         <Image src="/logo.png" alt="Visionary Home Offer" width={319} height={180} priority className="h-auto w-44" />
       </Link>
@@ -48,22 +48,22 @@ export function Sidebar({ counts, deletedCount = 0 }: { counts: Partial<Record<D
           const divider = i === 1 || item.icon === 'pipeline_review';
           return (
             <div key={item.href}>
-              {divider && <div className="mx-3 my-2 border-t" aria-hidden />}
+              {divider && <div className="mx-3 my-2 border-t border-brand-teal" aria-hidden />}
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-sm transition-colors',
                   active
-                    ? 'bg-primary font-medium text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-primary/10 hover:text-primary',
+                    ? 'bg-brand-yellow font-medium text-neutral-900 shadow-sm'
+                    : 'text-muted-foreground hover:bg-brand-yellow/20 hover:text-foreground',
                 )}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
                 <span className="flex-1 truncate">{item.title}</span>
                 {count !== null && count > 0 && (
                   <span
-                    className={cn('rounded-full px-1.5 text-xs tabular-nums', active ? 'bg-primary-foreground/20 text-primary-foreground' : 'text-muted-foreground')}
+                    className={cn('rounded-full px-1.5 text-xs tabular-nums', active ? 'bg-black/10 text-neutral-900' : 'text-muted-foreground')}
                     aria-label={`${count} deals`}
                   >
                     {count}

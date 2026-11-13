@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { MemberRole, Organization } from '@/types/database.types';
+import { canAccess, homeFor, isAdminRole, type Area } from './access';
 import { getCurrentContext, getCurrentUser, type CurrentContext } from './queries';
 
 /**
@@ -41,6 +42,19 @@ export async function requireContext(): Promise<AuthedContext> {
  */
 export async function requireRole(roles: MemberRole[]): Promise<AuthedContext> {
   const ctx = await requireContext();
-  if (!roles.includes(ctx.role)) redirect('/dashboard');
+  if (!roles.includes(ctx.role)) redirect(homeFor(ctx));
   return ctx;
+}
+
+/** Pages a "User" may only open when an admin gave them that area. */
+export async function requireArea(area: Area): Promise<AuthedContext> {
+  const ctx = await requireContext();
+  if (!canAccess(ctx, area)) redirect(homeFor(ctx));
+  return ctx;
+}
+
+/** Admin-only server actions: returns the context, or null when not allowed. */
+export async function adminContext(): Promise<AuthedContext | null> {
+  const ctx = await requireContext();
+  return isAdminRole(ctx.role) ? ctx : null;
 }

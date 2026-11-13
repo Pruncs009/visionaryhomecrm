@@ -101,6 +101,14 @@ export async function getConversation(partnerId: string): Promise<ChatResult<Cha
       .eq('sender_id', partnerId)
       .eq('recipient_id', me)
       .is('read_at', null);
+    // Their "new message" bell notifications are seen now too (ignore errors).
+    await supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', me)
+      .eq('actor_id', partnerId)
+      .eq('kind', 'message')
+      .is('read_at', null);
   }
   return { ok: true, data: await withLinks(supabase, rows) };
 }

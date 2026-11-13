@@ -20,6 +20,17 @@ export type CurrentContext = {
   profile: Profile | null;
   organization: Organization | null;
   role: MemberRole | null;
+  /** Extra areas a "User" can open (see features/auth/access.ts). */
+  permissions: string[];
+  /** Added by an admin and hasn't chosen their own password yet. */
+  mustChangePassword: boolean;
+};
+
+type MembershipRow = {
+  role: MemberRole;
+  permissions?: string[] | null;
+  must_change_password?: boolean | null;
+  organization: Organization | null;
 };
 
 /**
@@ -31,20 +42,22 @@ export const getCurrentContext = cache(async (): Promise<CurrentContext | null> 
   if (!user) return null;
 
   const supabase = await createClient();
-  const [profileRes, membershipRes] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+  const membershipQuery = (columns: string) =>
     supabase
       .from('memberships')
-      .select('role, organization:organizations(*)')
+      .select(columns)
       .eq('user_id', user.id)
       .order('created_at', { ascending: true })
       .limit(1)
-      .maybeSingle(),
+      .maybeSingle();
+  const [profileRes, firstTry] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+    membershipQuery('role, permissions, must_change_password, organization:organizations(*)'),
   ]);
+  // Before the Manage Users migration runs, those columns don't exist yet.
+  const membershipRes = firstTry.error ? await membershipQuery('role, organization:organizations(*)') : firstTry;
 
-  const membership = membershipRes.data as
-    | { role: MemberRole; organization: Organization | null }
-    | null;
+  const membership = membershipRes.data as unknown as MembershipRow | null;
 
   return {
     userId: user.id,
@@ -52,5 +65,7 @@ export const getCurrentContext = cache(async (): Promise<CurrentContext | null> 
     profile: (profileRes.data as Profile | null) ?? null,
     organization: membership?.organization ?? null,
     role: membership?.role ?? null,
+    permissions: membership?.permissions ?? [],
+    mustChangePassword: !!membership?.must_change_password,
   };
 });

@@ -10,6 +10,8 @@ import {
   resetPasswordSchema,
 } from './schemas';
 import { setPendingEmail } from './pending-email';
+import type { MemberRole } from '@/types/database.types';
+import { areaForPath, canAccess, homeFor } from './access';
 import type { ActionState } from './types';
 
 /** Base URL for links inside auth emails. */
@@ -21,6 +23,23 @@ async function getOrigin() {
 function str(formData: FormData, key: string) {
   const v = formData.get(key);
   return typeof v === 'string' ? v : '';
+}
+
+/** Where to go after signing in / choosing a password: the default-password screen, or a page this person may open. */
+async function landingPath(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, next?: string) {
+  const dest = safeRedirectPath(next);
+  const { data, error } = await supabase
+    .from('memberships')
+    .select('role, permissions, must_change_password')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return dest; // before the Manage Users update: old behavior
+  if (data.must_change_password) return '/change-password';
+  const who = { role: data.role as MemberRole, permissions: (data.permissions as string[] | null) ?? [] };
+  const area = areaForPath(dest.split('?')[0]);
+  return area && !canAccess(who, area) ? homeFor(who) : dest;
 }
 
 // -----------------------------------------------------------------------------
@@ -39,7 +58,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data: signedIn, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
@@ -56,7 +75,7 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   }
 
   // redirect() throws, so it must stay outside any try/catch.
-  redirect(safeRedirectPath(parsed.data.next));
+  redirect(await landingPath(supabase, signedIn.user!.id, parsed.data.next));
 }
 
 // -----------------------------------------------------------------------------
@@ -128,10 +147,10 @@ export async function resetPassword(_prev: ActionState, formData: FormData): Pro
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  const { data: updated, error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
     return { error: error.message };
   }
 
-  redirect('/dashboard');
+  redirect(updated.user ? await landingPath(supabase, updated.user.id) : '/dashboard');
 }

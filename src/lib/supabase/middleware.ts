@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { PATHNAME_HEADER } from '@/features/auth/access';
 
 /** Pages a signed-out visitor may open. */
 const PUBLIC_PATHS = ['/login', '/signup', '/register', '/forgot-password', '/verify-email'];
@@ -15,6 +16,8 @@ const AUTH_ONLY_PATHS = ['/login', '/signup', '/register'];
  * 3. Redirects signed-in users away from /login and /signup.
  */
 export async function updateSession(request: NextRequest) {
+  // Lets the app layout check page access before anything renders (features/auth/access.ts).
+  request.headers.set(PATHNAME_HEADER, request.nextUrl.pathname);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

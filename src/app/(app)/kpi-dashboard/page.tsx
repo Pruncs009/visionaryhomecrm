@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BarChart3 } from 'lucide-react';
-import { requireContext } from '@/features/auth/guards';
+import { requireArea } from '@/features/auth/guards';
 import { KPI_SHEET } from '@/features/kpi/sheet-config';
 import { SheetEmbed } from '@/features/pipeline-review/components/sheet-embed';
 
 export const metadata: Metadata = { title: 'KPI Dashboard' };
 
 export default async function KpiDashboardPage() {
-  await requireContext();
+  await requireArea('kpi');
   return (
     <SheetEmbed
       sheetId={KPI_SHEET.id}

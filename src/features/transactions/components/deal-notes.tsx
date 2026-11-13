@@ -5,12 +5,14 @@ import { useActionState, useEffect, useMemo, useRef, useState, useTransition } f
 import { Pin, PinOff, StickyNote, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { MentionTextarea } from '@/features/notifications/components/mention-textarea';
+import { splitMentions, type Mentionable } from '@/features/notifications/mentions';
 import { cn } from '@/lib/utils';
 import { addDealNote, deleteDealNote, setDealNotePinned, type MutationResult, type NoteActionState } from '../deal-actions';
 import type { DealNote } from '../types';
 
-export function DealNotes({ txId, notes, timezone, canDelete }: { txId: string; notes: DealNote[]; timezone: string; canDelete: boolean }) {
+export function DealNotes({ txId, notes, timezone, canDelete, people = [] }: { txId: string; notes: DealNote[]; timezone: string; canDelete: boolean; /** Teammates for @mentions. */ people?: Mentionable[] }) {
+  const names = people.map((p) => p.name);
   const bound = useMemo(() => addDealNote.bind(null, txId), [txId]);
   const [state, action, pending] = useActionState<NoteActionState, FormData>(bound, {});
   const formRef = useRef<HTMLFormElement>(null);
@@ -42,10 +44,11 @@ export function DealNotes({ txId, notes, timezone, canDelete }: { txId: string; 
     <section aria-labelledby="notes-heading" className="space-y-4">
       <h2 id="notes-heading" className="text-base font-semibold">Notes</h2>
       <form ref={formRef} action={action} className="space-y-2">
-        <Textarea
+        <MentionTextarea
+          people={people}
           name="body"
           rows={3}
-          placeholder="Add a note about this deal… (Ctrl+Enter to save)"
+          placeholder="Add a note… type @ to mention a teammate (Ctrl+Enter to save)"
           aria-label="New note"
           defaultValue={state.success ? '' : state.values?.body}
           aria-invalid={!!state.fieldErrors?.body}
@@ -91,7 +94,11 @@ export function DealNotes({ txId, notes, timezone, canDelete }: { txId: string; 
                   )}
                 </span>
               </div>
-              <p className="text-sm whitespace-pre-wrap">{n.body}</p>
+              <p className="text-sm whitespace-pre-wrap">
+                {splitMentions(n.body, names).map((part, i) =>
+                  part.mention ? <span key={i} className="rounded bg-brand-yellow/30 px-0.5 font-medium">{part.text}</span> : part.text,
+                )}
+              </p>
             </li>
           ))}
         </ul>

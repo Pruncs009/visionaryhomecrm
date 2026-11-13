@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireArea } from '@/features/auth/guards';
 
 const tabs = [
   { href: '/settings/profile', label: 'Profile' },
@@ -8,7 +9,8 @@ const tabs = [
   { href: '/settings/billing', label: 'Billing' },
 ];
 
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
+  await requireArea('settings');
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Settings</h1>

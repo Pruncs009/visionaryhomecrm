@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { requireContext } from '@/features/auth/guards';
+import { requireArea } from '@/features/auth/guards';
 import {
   AgentPerformanceChart,
   ClosingRateChart,
@@ -24,7 +24,7 @@ const FALLBACK_TZ = 'America/New_York';
 type PageProps = { searchParams: Promise<{ range?: string; agent?: string }> };
 
 export default async function ReportsPage({ searchParams }: PageProps) {
-  const ctx = await requireContext();
+  const ctx = await requireArea('reports');
   const sp = await searchParams;
   const timezone = isValidTimeZone(ctx.profile?.timezone) ? ctx.profile!.timezone : FALLBACK_TZ;
   const range = parseRange(sp.range);

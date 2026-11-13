@@ -1,4 +1,6 @@
 export const CHAT_BUCKET = 'chat-files';
+/** Window event the notification bell fires to open a conversation (detail: the other person's user id). */
+export const OPEN_CHAT_EVENT = 'crm:open-chat';
 export const CHAT_MAX_FILE_BYTES = 25 * 1024 * 1024;
 export const CHAT_MAX_FILES = 10;
 

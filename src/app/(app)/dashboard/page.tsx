@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
-import { requireContext } from '@/features/auth/guards';
+import { requireArea } from '@/features/auth/guards';
 import { AppointmentsCard } from '@/features/dashboard/components/appointments-card';
 import { KpiCards } from '@/features/dashboard/components/kpi-cards';
 import { RecentClosingsCard } from '@/features/dashboard/components/recent-closings-card';
@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: 'Dashboard' };
 const FALLBACK_TZ = 'America/New_York';
 
 export default async function DashboardPage() {
-  const ctx = await requireContext();
+  const ctx = await requireArea('dashboard');
   const timezone = isValidTimeZone(ctx.profile?.timezone) ? ctx.profile!.timezone : FALLBACK_TZ;
   const scope: DashboardScope = { orgId: ctx.organization.id, userId: ctx.userId, timezone };
 

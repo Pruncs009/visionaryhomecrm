@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ExternalLink, Gauge } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import { requireContext } from '@/features/auth/guards';
+import { requireArea } from '@/features/auth/guards';
 import { KpiReportView } from '@/features/kpi/components/kpi-report';
 import { QuarterComparison, QuarterTabs } from '@/features/kpi/components/quarter-compare';
 import { ReportTabs } from '@/features/kpi/components/report-tabs';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 type PageProps = { searchParams: Promise<{ q?: string }> };
 
 export default async function KpiReportPage({ searchParams }: PageProps) {
-  await requireContext();
+  await requireArea('reports');
   const sp = await searchParams;
 
   // The year shown: the current one if the sheet has tabs for it, else the latest year it has.

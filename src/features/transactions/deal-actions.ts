@@ -10,6 +10,8 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireContext } from '@/features/auth/guards';
 import type { ActionState } from '@/features/auth/types';
+import { getTeamMembers } from '@/features/leads/queries';
+import { findMentions } from '@/features/notifications/mentions';
 import { createClient } from '@/lib/supabase/server';
 import { getTransaction } from './queries';
 import { taskBlocker } from './task-requirements';
@@ -134,6 +136,8 @@ export async function addDealNote(txId: string, _prev: NoteActionState, formData
     .select('id, body, is_pinned, created_at')
     .single();
   if (error || !data) return { error: error ? dbError(error) : 'Something went wrong. Please try again.', values: { body } };
+  // A notification problem must never lose the note.
+  await notifyNoteMentions(ctx, txId, parsed.data.body).catch((e) => console.error('[notes] mention notifications failed', e));
   return {
     success: 'Note added',
     note: {
@@ -144,6 +148,31 @@ export async function addDealNote(txId: string, _prev: NoteActionState, formData
       authorName: ctx.profile?.full_name ?? null,
     },
   };
+}
+
+/** "@Name" in a deal note → a bell notification for that teammate. */
+async function notifyNoteMentions(ctx: Awaited<ReturnType<typeof requireContext>>, txId: string, body: string) {
+  if (!body.includes('@')) return;
+  const org = ctx.organization.id;
+  const team = (await getTeamMembers(org)).filter((m) => m.userId !== ctx.userId);
+  const mentioned = findMentions(body, team);
+  if (!mentioned.length) return;
+  const tx = await getTransaction(org, txId);
+  const actor = ctx.profile?.full_name?.trim() || ctx.email;
+  const where = tx?.property_address ? ` on ${tx.property_address}` : '';
+  const supabase = await createClient();
+  const { error } = await supabase.from('notifications').insert(
+    mentioned.map((m) => ({
+      organization_id: org,
+      user_id: m.userId,
+      actor_id: ctx.userId,
+      kind: 'note_mention',
+      title: `${actor} mentioned you in a note${where}`.slice(0, 200),
+      body: body.slice(0, 300),
+      link: `/transactions/${txId}?tab=notes`,
+    })),
+  );
+  if (error) throw new Error(error.message);
 }
 
 export async function setDealNotePinned(txId: string, noteId: string, pinned: boolean): Promise<MutationResult> {

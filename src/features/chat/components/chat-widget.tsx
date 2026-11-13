@@ -14,7 +14,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { getChatContacts, getConversation, sendChatMessage } from '../actions';
-import { CHAT_BUCKET, CHAT_MAX_FILES, CHAT_MAX_FILE_BYTES, type ChatAttachment, type ChatContact, type ChatMessage } from '../types';
+import { CHAT_BUCKET, CHAT_MAX_FILES, CHAT_MAX_FILE_BYTES, OPEN_CHAT_EVENT, type ChatAttachment, type ChatContact, type ChatMessage } from '../types';
 
 const LAST_PARTNER_KEY = 'crm-chat:partner';
 const POLL_OPEN_MS = 8_000;
@@ -171,6 +171,17 @@ export function ChatWidget({ me, orgId }: { me: { id: string; name: string }; or
       void supabase.removeChannel(channel);
     };
   }, [me.id, loadConversation, refreshContacts]);
+
+  // The notification bell asks to open a conversation.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (id) setPartnerId(id);
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_CHAT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpen);
+  }, []);
 
   // Keep the newest message in view.
   useLayoutEffect(() => {

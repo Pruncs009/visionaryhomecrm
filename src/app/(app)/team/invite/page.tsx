@@ -1,7 +1,6 @@
-export default function InviteMemberPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Invite team member</h1>
-    </div>
-  );
+import { redirect } from 'next/navigation';
+
+// Users are added and managed on /team (Manage Users).
+export default function Page() {
+  redirect('/team');
 }

@@ -292,7 +292,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
           </nav>
           <div className="p-5">
             {tab === 'tasks' && <DealTasks txId={tx.id} tasks={ws.tasks} members={members} today={today} canDelete={canDelete} managers={managers} blockers={taskBlockers} initialFilter={sp.tasks === 'overdue' || sp.tasks === 'upcoming' || sp.tasks === 'completed' ? sp.tasks : null} />}
-            {tab === 'notes' && <DealNotes txId={tx.id} notes={ws.notes} timezone={timezone} canDelete={canDelete} />}
+            {tab === 'notes' && <DealNotes txId={tx.id} notes={ws.notes} timezone={timezone} canDelete={canDelete} people={members.map((m) => ({ userId: m.userId, name: m.name }))} />}
             {tab === 'docs' && <DocumentsPanel orgId={org} transactionId={tx.id} files={files} timezone={timezone} canDelete={canDelete} />}
             {tab === 'details' && <Details tx={tx} ws={ws} editHref={editHref} />}
             {tab === 'financials' && <Financials tx={tx} ws={ws} editHref={editHref} />}

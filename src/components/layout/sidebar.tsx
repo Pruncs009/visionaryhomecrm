@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ArrowRightLeft, BarChart3, Calendar, CircleCheckBig, CircleSlash, FileSignature, Hammer, LayoutDashboard,
-  FileSpreadsheet, Gauge, Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, type LucideIcon,
+  FileSpreadsheet, Gauge, Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, UsersRound, type LucideIcon,
 } from 'lucide-react';
-import { mainNav, type NavIcon } from '@/config/navigation';
+import { mainNav, type NavIcon, type NavItem } from '@/config/navigation';
 import type { DealStage } from '@/features/deals/constants';
 import { cn } from '@/lib/utils';
 import { useNavHighlight } from './nav-highlight';
@@ -29,24 +29,39 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   calendar: Calendar,
   reports: BarChart3,
   settings: Settings,
+  users: UsersRound,
 };
 
-export function Sidebar({ counts, deletedCount = 0 }: { counts: Partial<Record<DealStage, number>>; deletedCount?: number }) {
+/** Menu groups, split by thin dividers: [Dashboard] | [deal stages … Deleted] | [the rest]. */
+const groupOf = (item: NavItem) => (item.icon === 'dashboard' ? 0 : item.stage || item.icon === 'deleted' ? 1 : 2);
+
+export function Sidebar({
+  counts,
+  deletedCount = 0,
+  hidden = [],
+  homeHref = '/dashboard',
+}: {
+  counts: Partial<Record<DealStage, number>>;
+  deletedCount?: number;
+  /** Menu items this person has no access to (hrefs). */
+  hidden?: string[];
+  homeHref?: string;
+}) {
   const pathname = usePathname();
   const highlight = useNavHighlight();
+  const items = mainNav.filter((item) => !hidden.includes(item.href));
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-brand-teal p-4 md:block">
-      <Link href="/dashboard" className="mb-6 block px-3" aria-label="Visionary Home Offer — Dashboard">
+      <Link href={homeHref} className="mb-6 block px-3" aria-label="Visionary Home Offer — Home">
         <Image src="/logo.png" alt="Visionary Home Offer" width={319} height={180} priority className="h-auto w-44" />
       </Link>
       <nav aria-label="Main" className="space-y-0.5">
-        {mainNav.map((item, i) => {
+        {items.map((item, i) => {
           const Icon = ICONS[item.icon];
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || highlight === item.href;
           const count = item.stage ? counts[item.stage] ?? 0 : item.icon === 'deleted' ? deletedCount : null;
-          // Thin dividers: [Dashboard] | [deal stages] | [Calendar, Reports, Settings]
-          const divider = i === 1 || item.icon === 'pipeline_review';
+          const divider = i > 0 && groupOf(item) !== groupOf(items[i - 1]);
           return (
             <div key={item.href}>
               {divider && <div className="mx-3 my-2 border-t border-brand-teal" aria-hidden />}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ArrowRightLeft, BarChart3, Calendar, CircleCheckBig, CircleSlash, FileSignature, Hammer, LayoutDashboard,
-  Megaphone, MoveRight, Repeat, Settings, ShieldOff, type LucideIcon,
+  Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, type LucideIcon,
 } from 'lucide-react';
 import { mainNav, type NavIcon } from '@/config/navigation';
 import type { DealStage } from '@/features/deals/constants';
@@ -23,12 +23,13 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   closed: CircleCheckBig,
   off_market: ShieldOff,
   dead: CircleSlash,
+  deleted: Trash2,
   calendar: Calendar,
   reports: BarChart3,
   settings: Settings,
 };
 
-export function Sidebar({ counts }: { counts: Partial<Record<DealStage, number>> }) {
+export function Sidebar({ counts, deletedCount = 0 }: { counts: Partial<Record<DealStage, number>>; deletedCount?: number }) {
   const pathname = usePathname();
   const highlight = useNavHighlight();
 
@@ -41,7 +42,7 @@ export function Sidebar({ counts }: { counts: Partial<Record<DealStage, number>>
         {mainNav.map((item, i) => {
           const Icon = ICONS[item.icon];
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || highlight === item.href;
-          const count = item.stage ? counts[item.stage] ?? 0 : null;
+          const count = item.stage ? counts[item.stage] ?? 0 : item.icon === 'deleted' ? deletedCount : null;
           // Thin dividers: [Dashboard] | [deal stages] | [Calendar, Reports, Settings]
           const divider = i === 1 || (item.icon === 'calendar');
           return (

@@ -213,6 +213,68 @@ export async function deleteTransaction(id: string): Promise<MutationResult> {
   return { ok: true };
 }
 
+/** Deleted menu: put a deleted deal back where it was. */
+export async function restoreTransaction(id: string): Promise<MutationResult> {
+  const ctx = await requireContext();
+  if (ctx.role === 'assistant') return { ok: false, error: 'Only agents and admins can restore transactions.' };
+  if (!uuidSchema.safeParse(id).success) return { ok: false, error: 'Transaction not found.' };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ deleted_at: null })
+    .eq('organization_id', ctx.organization.id)
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .select('id');
+  if (error) return { ok: false, error: dbErrorMessage(error) };
+  if (!data?.length) return { ok: false, error: 'This deal is not in Deleted.' };
+  revalidateTransactions(id);
+  return { ok: true };
+}
+
+/**
+ * Deleted menu: remove a deleted deal for good — the deal, its tasks, notes,
+ * documents (and their stored files) and people links. Contacts and the property
+ * record stay. Only deals already in Deleted can be removed this way.
+ */
+export async function purgeTransaction(id: string): Promise<MutationResult> {
+  const ctx = await requireContext();
+  if (ctx.role === 'assistant') return { ok: false, error: 'Only agents and admins can permanently delete transactions.' };
+  if (!uuidSchema.safeParse(id).success) return { ok: false, error: 'Transaction not found.' };
+  const org = ctx.organization.id;
+  const supabase = await createClient();
+
+  const { data: tx } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('organization_id', org)
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .maybeSingle();
+  if (!tx) return { ok: false, error: 'Only deals in Deleted can be permanently deleted.' };
+
+  // Stored files first (the file rows go with the deal).
+  const { data: files } = await supabase.from('files').select('bucket_id, storage_path').eq('organization_id', org).eq('transaction_id', id);
+  const byBucket = new Map<string, string[]>();
+  for (const f of (files ?? []) as { bucket_id: string; storage_path: string }[]) {
+    byBucket.set(f.bucket_id, [...(byBucket.get(f.bucket_id) ?? []), f.storage_path]);
+  }
+  for (const [bucket, paths] of byBucket) {
+    const { error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) console.error('[transactions] could not remove stored files', error);
+  }
+
+  // Tasks only lose their link when a deal is deleted, so remove them explicitly.
+  const { error: taskError } = await supabase.from('tasks').delete().eq('organization_id', org).eq('transaction_id', id);
+  if (taskError) return { ok: false, error: dbErrorMessage(taskError) };
+
+  const { data, error } = await supabase.from('transactions').delete().eq('organization_id', org).eq('id', id).select('id');
+  if (error) return { ok: false, error: dbErrorMessage(error) };
+  if (!data?.length) return { ok: false, error: 'This deal was already removed.' };
+  revalidateTransactions(id);
+  return { ok: true };
+}
+
 // -----------------------------------------------------------------------------
 // Documents. The browser uploads straight to Storage (RLS: first path segment
 // must be the user's org). These actions record / sign / delete.

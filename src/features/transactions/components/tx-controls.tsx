@@ -66,7 +66,7 @@ export function DeleteTransactionButton({ id, name }: { id: string; name: string
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              The deal leaves your pipeline and reports. Its documents, property, buyer and seller records are kept.
+              The deal moves to <strong>Deleted</strong> in the menu. You can restore it from there or delete it permanently.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -75,9 +75,9 @@ export function DeleteTransactionButton({ id, name }: { id: string; name: string
               onClick={() => start(async () => {
                 const r = await deleteTransaction(id);
                 if (!r.ok) return void toast.error(r.error);
-                toast.success(`Deleted ${name}`);
+                toast.success(`${name} moved to Deleted`);
                 setOpen(false);
-                router.push('/transactions');
+                router.push('/deals/deleted');
               })}>
               {pending ? 'Deleting…' : 'Delete transaction'}
             </AlertDialogAction>

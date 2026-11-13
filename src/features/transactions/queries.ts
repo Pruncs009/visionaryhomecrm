@@ -1,3 +1,4 @@
+import type { DealStage } from '@/features/deals/constants';
 import { createClient } from '@/lib/supabase/server';
 import type { FileCategory } from '@/types/database.types';
 import { ACTIVE_STATUSES, TX_PAGE_SIZE } from './constants';
@@ -378,4 +379,52 @@ export async function getTeamNameOptions(orgId: string): Promise<Record<TeamRole
     }
   }
   return Object.fromEntries(TEAM_ROLES.map((r) => [r, [...out[r]].sort((a, b) => a.localeCompare(b))])) as Record<TeamRole, string[]>;
+}
+
+export type DeletedDeal = {
+  id: string;
+  name: string;
+  stage: DealStage;
+  address: string;
+  cityState: string;
+  purchasePrice: number | null;
+  deletedAt: string;
+};
+
+/** Deals in the Deleted menu (soft-deleted), most recently deleted first. */
+export async function listDeletedTransactions(orgId: string): Promise<DeletedDeal[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id, name, deal_stage, purchase_price, deleted_at, property:properties(address_line1, city, state)')
+    .eq('organization_id', orgId)
+    .not('deleted_at', 'is', null)
+    .order('deleted_at', { ascending: false })
+    .limit(500);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Record<string, unknown>[]).map((t) => {
+    const raw = t.property as unknown;
+    const p = (Array.isArray(raw) ? raw[0] : raw) as { address_line1: string | null; city: string | null; state: string | null } | null;
+    return {
+      id: t.id as string,
+      name: t.name as string,
+      stage: t.deal_stage as DealStage,
+      address: p?.address_line1 || (t.name as string),
+      cityState: [p?.city, p?.state].filter(Boolean).join(', '),
+      purchasePrice: num(t.purchase_price),
+      deletedAt: t.deleted_at as string,
+    };
+  });
+}
+
+/** Number of deals in the Deleted menu (sidebar badge). */
+export async function countDeletedTransactions(orgId: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .not('deleted_at', 'is', null);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }

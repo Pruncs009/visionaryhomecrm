@@ -1,22 +1,20 @@
-import { Button } from '@/components/ui/button';
+import { UserMenu } from './user-menu';
 
 type TopbarProps = {
   email: string;
   fullName: string | null;
   organizationName: string | null;
+  /** Saved page background (Settings → Change theme). */
+  background: string;
 };
 
-export function Topbar({ email, fullName, organizationName }: TopbarProps) {
+export function Topbar({ email, fullName, organizationName, background }: TopbarProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-brand-teal px-6">
       <span className="text-sm font-medium">{organizationName}</span>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">{fullName ?? email}</span>
-        <form action="/auth/signout" method="post">
-          <Button type="submit" variant="outline" className="h-8 px-3">
-            Sign out
-          </Button>
-        </form>
+        <UserMenu initialBg={background} />
       </div>
     </header>
   );

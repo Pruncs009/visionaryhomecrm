@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import { Check, LogOut, Palette, Pipette, Settings, X } from 'lucide-react';
 import {
@@ -30,8 +30,10 @@ function applyBackground(hex: string) {
   if (shell) {
     if (hex === DEFAULT_BG) shell.style.removeProperty('--background');
     else shell.style.setProperty('--background', hex);
-    shell.toggleAttribute('data-dark', hex !== DEFAULT_BG && isDark(hex));
+    shell.classList.toggle('dark', isDark(hex));
   }
+  // Menus and popups open outside the shell; dark mode on <html> covers them too.
+  document.documentElement.classList.toggle('dark', isDark(hex));
   document.cookie = `${BG_COOKIE}=${encodeURIComponent(hex)}; path=/; max-age=31536000; samesite=lax`;
 }
 
@@ -41,6 +43,12 @@ export function UserMenu({ initialBg }: { initialBg: string }) {
   const [customOpen, setCustomOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const signOutForm = useRef<HTMLFormElement>(null);
+
+  // Popups render outside the app shell, so mirror dark mode on <html> while the app is open.
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDark(bg));
+    return () => document.documentElement.classList.remove('dark');
+  }, [bg]);
 
   const choose = (hex: string) => {
     const v = normalizeBg(hex);

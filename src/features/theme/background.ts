@@ -34,11 +34,11 @@ export function isDark(hex: string): boolean {
 }
 
 /**
- * Props for the app shell: the background color, plus data-dark on dark colors
- * (globals.css then switches page text to light, keeping cards dark-on-white).
+ * Theme for the app shell: the background color, and dark mode (the "dark"
+ * class) when the color is dark, so panels, fields and text turn dark too.
  */
-export function shellThemeProps(hex: string): { style: CSSProperties; 'data-dark'?: '' } {
+export function shellTheme(hex: string): { style: CSSProperties; dark: boolean } {
   const bg = normalizeBg(hex);
-  if (bg === DEFAULT_BG) return { style: {} };
-  return { style: { '--background': bg } as CSSProperties, ...(isDark(bg) ? { 'data-dark': '' as const } : {}) };
+  if (bg === DEFAULT_BG) return { style: {}, dark: false };
+  return { style: { '--background': bg } as CSSProperties, dark: isDark(bg) };
 }

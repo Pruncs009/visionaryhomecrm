@@ -141,13 +141,12 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
-/* Settings → Change theme: on a dark page background, text on the page turns light,
-   but white surfaces (cards, panels) keep the normal dark text. */
-#app-shell[data-dark] {
-  --foreground: #f8fafc;
-  --muted-foreground: rgba(248, 250, 252, 0.72);
-}
-#app-shell[data-dark] :is([data-slot="card"], .bg-card, .bg-popover, .bg-white) {
-  --foreground: oklch(0.145 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+/* Settings → Change theme: a dark background switches the whole CRM to dark mode
+   (the .dark palette above). Panels and fields are lifted shades of the chosen color. */
+#app-shell.dark[style*="--background"] {
+  --card: color-mix(in oklab, var(--background), white 7%);
+  --popover: color-mix(in oklab, var(--background), white 7%);
+  --muted: color-mix(in oklab, var(--background), white 13%);
+  --secondary: color-mix(in oklab, var(--background), white 13%);
+  --accent: color-mix(in oklab, var(--background), white 13%);
 }

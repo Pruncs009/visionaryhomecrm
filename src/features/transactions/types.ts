@@ -71,6 +71,7 @@ export type TransactionRow = {
   bc_closing_date: string | null;
   bc_purchase_price: number | null;
   bc_earnest_money: number | null;
+  bc_emd_in: boolean | null;
 };
 
 export type TransactionListResult = {

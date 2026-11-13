@@ -202,11 +202,15 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               <DealHeaderField key={`emd-${tx.earnest_money ?? ''}`} id={tx.id} field="earnest_money" value={tx.earnest_money} label={splitDeal ? 'A-B EMD' : undefined} />
               <EmdInSelect key={`emd-in-${tx.emd_in}`} id={tx.id} value={tx.emd_in} />
             </div>
+            {/* B-C leg on A-C deals: same layout as A-B (big price, then EMD + IN) */}
             {splitDeal && (
-              <div className="grid grid-cols-2 gap-3">
-                <DealHeaderField key={`bcpp-${tx.bc_purchase_price ?? ''}`} id={tx.id} field="bc_purchase_price" value={tx.bc_purchase_price} />
-                <DealHeaderField key={`bcemd-${tx.bc_earnest_money ?? ''}`} id={tx.id} field="bc_earnest_money" value={tx.bc_earnest_money} />
-              </div>
+              <>
+                <DealHeaderField key={`bcpp-${tx.bc_purchase_price ?? ''}`} id={tx.id} field="bc_purchase_price" value={tx.bc_purchase_price} inputClassName="h-9 text-lg font-semibold md:text-lg" />
+                <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-3">
+                  <DealHeaderField key={`bcemd-${tx.bc_earnest_money ?? ''}`} id={tx.id} field="bc_earnest_money" value={tx.bc_earnest_money} />
+                  <EmdInSelect key={`bc-emd-in-${tx.bc_emd_in}`} id={tx.id} value={tx.bc_emd_in} leg="bc" />
+                </div>
+              </>
             )}
             <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
           </div>

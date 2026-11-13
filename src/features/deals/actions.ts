@@ -114,13 +114,20 @@ export async function updateDealHeaderField(
 }
 
 /** "IN" next to the EMD on the deal header: is the earnest money deposit in? */
-export async function updateEmdIn(id: string, value: 'yes' | 'no' | ''): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function updateEmdIn(
+  id: string,
+  value: 'yes' | 'no' | '',
+  leg: 'ab' | 'bc' = 'ab',
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const ctx = await requireContext();
-  if (!z.string().uuid().safeParse(id).success || !['yes', 'no', ''].includes(value)) return { ok: false, error: 'Invalid value.' };
+  if (!z.string().uuid().safeParse(id).success || !['yes', 'no', ''].includes(value) || !['ab', 'bc'].includes(leg)) {
+    return { ok: false, error: 'Invalid value.' };
+  }
+  const column = leg === 'bc' ? 'bc_emd_in' : 'emd_in';
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('transactions')
-    .update({ emd_in: value === '' ? null : value === 'yes' })
+    .update({ [column]: value === '' ? null : value === 'yes' })
     .eq('organization_id', ctx.organization.id)
     .eq('id', id)
     .is('deleted_at', null)

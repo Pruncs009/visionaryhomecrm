@@ -214,7 +214,7 @@ export function DealHeaderField({
 }
 
 /** "IN" dropdown next to the EMD: Yes / No (blank = not set). Saves on change. */
-export function EmdInSelect({ id, value }: { id: string; value: boolean | null }) {
+export function EmdInSelect({ id, value, leg = 'ab' }: { id: string; value: boolean | null; leg?: 'ab' | 'bc' }) {
   const selectId = useId();
   const initial = value === null ? '' : value ? 'yes' : 'no';
   const [current, setCurrent] = useState(initial);
@@ -232,8 +232,9 @@ export function EmdInSelect({ id, value }: { id: string; value: boolean | null }
           const previous = current;
           setCurrent(next);
           start(async () => {
-            const r = await updateEmdIn(id, next);
-            if (r.ok) toast.success(next ? `EMD in: ${next === 'yes' ? 'Yes' : 'No'}` : 'EMD in cleared');
+            const r = await updateEmdIn(id, next, leg);
+            const what = leg === 'bc' ? 'B-C EMD in' : 'EMD in';
+            if (r.ok) toast.success(next ? `${what}: ${next === 'yes' ? 'Yes' : 'No'}` : `${what} cleared`);
             else {
               setCurrent(previous);
               toast.error(r.error);

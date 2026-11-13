@@ -6,21 +6,23 @@ import { Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KEY_DATES, type KeyDateKey } from '../constants';
+import { keyDatesFor, type DateKey } from '../constants';
 import { updateDealDates } from '../date-actions';
 
-type Dates = Record<KeyDateKey, string>;
+type Dates = Partial<Record<DateKey, string>>;
 
 /**
  * Opens the deal's key dates in a dialog. Used for the "+" on the Dates panel
  * (`variant="plus"`) and for each row's "Add" link (`variant="add"`, which
  * focuses that date).
  */
-export function EditDatesButton({ txId, dates, focusKey, variant }: {
+export function EditDatesButton({ txId, dates, focusKey, variant, split = false }: {
   txId: string;
-  dates: Partial<Record<KeyDateKey, string | null>>;
-  focusKey?: KeyDateKey;
+  dates: Partial<Record<DateKey, string | null>>;
+  focusKey?: DateKey;
   variant: 'plus' | 'add';
+  /** A-C deal: A-B and B-C dates. */
+  split?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -35,22 +37,24 @@ export function EditDatesButton({ txId, dates, focusKey, variant }: {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs" />
         <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-popover p-5 text-popover-foreground ring-1 ring-foreground/10 outline-none">
-          {open && <DatesForm txId={txId} dates={dates} focusKey={focusKey} onDone={() => setOpen(false)} />}
+          {open && <DatesForm txId={txId} dates={dates} focusKey={focusKey} split={split} onDone={() => setOpen(false)} />}
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }
 
-function DatesForm({ txId, dates, focusKey, onDone }: {
+function DatesForm({ txId, dates, focusKey, split, onDone }: {
   txId: string;
-  dates: Partial<Record<KeyDateKey, string | null>>;
-  focusKey?: KeyDateKey;
+  dates: Partial<Record<DateKey, string | null>>;
+  focusKey?: DateKey;
+  split: boolean;
   onDone: () => void;
 }) {
+  const keys = keyDatesFor(split);
   const uid = useId();
   const [values, setValues] = useState<Dates>(
-    () => Object.fromEntries(KEY_DATES.map((k) => [k.key, dates[k.key]?.slice(0, 10) ?? ''])) as Dates,
+    () => Object.fromEntries(keys.map((k) => [k.key, dates[k.key]?.slice(0, 10) ?? ''])) as Dates,
   );
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -83,13 +87,13 @@ function DatesForm({ txId, dates, focusKey, onDone }: {
       {formError && <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {KEY_DATES.map((k) => (
+        {keys.map((k) => (
           <div key={k.key} className="space-y-1.5">
             <label htmlFor={`${uid}-${k.key}`} className="text-sm font-medium">{k.label}</label>
             <Input
               id={`${uid}-${k.key}`}
               type="date"
-              value={values[k.key]}
+              value={values[k.key] ?? ''}
               autoFocus={k.key === focusKey}
               aria-invalid={!!errors[k.key]?.[0]}
               onChange={(e) => setValues((v) => ({ ...v, [k.key]: e.target.value }))}

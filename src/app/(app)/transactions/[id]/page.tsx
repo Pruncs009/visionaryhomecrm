@@ -6,7 +6,7 @@ import { NavHighlight } from '@/components/layout/nav-highlight';
 import { buttonVariants } from '@/components/ui/button';
 import { requireContext } from '@/features/auth/guards';
 import { getTeamMembers } from '@/features/leads/queries';
-import { KEY_DATES, TX_SIDE } from '@/features/transactions/constants';
+import { isSplitDeal, keyDatesFor, TX_SIDE } from '@/features/transactions/constants';
 import { DocumentsPanel } from '@/features/transactions/components/documents-panel';
 import { DealNotes } from '@/features/transactions/components/deal-notes';
 import { EditDatesButton } from '@/features/transactions/components/deal-dates-dialog';
@@ -89,6 +89,7 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
     }];
   };
   const managers = { lead: tx.lead_manager, acquisition: tx.acquisition_manager };
+  const splitDeal = isSplitDeal(tx);
   const setupTasks = ws.tasks.filter((t) => t.kind === 'deal_setup');
 
   const team: TeamNames = {
@@ -190,12 +191,18 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 xl:w-[30rem] xl:shrink-0">
           <div className="space-y-3">
-            <DealHeaderField id={tx.id} field="purchase_price" value={tx.purchase_price} inputClassName="h-9 text-lg font-semibold md:text-lg" />
+            <DealHeaderField key={`pp-${tx.purchase_price ?? ''}`} id={tx.id} field="purchase_price" value={tx.purchase_price} label={splitDeal ? 'A-B Purchase price' : undefined} inputClassName="h-9 text-lg font-semibold md:text-lg" />
             {/* EMD amount (transactions.earnest_money) with "IN" = is the deposit in? */}
             <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-3">
-              <DealHeaderField key={`emd-${tx.earnest_money ?? ''}`} id={tx.id} field="earnest_money" value={tx.earnest_money} />
+              <DealHeaderField key={`emd-${tx.earnest_money ?? ''}`} id={tx.id} field="earnest_money" value={tx.earnest_money} label={splitDeal ? 'A-B EMD' : undefined} />
               <EmdInSelect key={`emd-in-${tx.emd_in}`} id={tx.id} value={tx.emd_in} />
             </div>
+            {splitDeal && (
+              <div className="grid grid-cols-2 gap-3">
+                <DealHeaderField key={`bcpp-${tx.bc_purchase_price ?? ''}`} id={tx.id} field="bc_purchase_price" value={tx.bc_purchase_price} />
+                <DealHeaderField key={`bcemd-${tx.bc_earnest_money ?? ''}`} id={tx.id} field="bc_earnest_money" value={tx.bc_earnest_money} />
+              </div>
+            )}
             <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
           </div>
           <div className="space-y-3">
@@ -282,7 +289,8 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
 // -----------------------------------------------------------------------------
 function DatesPanel({ tx, timezone }: { tx: TransactionRow; timezone: string }) {
   const finished = tx.status === 'closed' || tx.status === 'cancelled';
-  const rows = KEY_DATES.map((k) => ({ ...k, date: tx[k.key] as string | null }));
+  const split = isSplitDeal(tx);
+  const rows = keyDatesFor(split).map((k) => ({ ...k, date: tx[k.key] as string | null }));
   const dates = Object.fromEntries(rows.map((r) => [r.key, r.date]));
   const nextKey = finished ? null : rows.filter((r) => r.date && daysUntil(r.date, timezone) >= 0).sort((a, b) => a.date!.localeCompare(b.date!))[0]?.key;
 
@@ -290,12 +298,12 @@ function DatesPanel({ tx, timezone }: { tx: TransactionRow; timezone: string }) 
     <section aria-labelledby="dates-heading" className="rounded-xl border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 id="dates-heading" className="font-semibold">Dates</h2>
-        <EditDatesButton txId={tx.id} dates={dates} variant="plus" />
+        <EditDatesButton txId={tx.id} dates={dates} variant="plus" split={split} />
       </div>
       <ul className="space-y-1.5">
         {rows.map((r) => {
           const days = r.date ? daysUntil(r.date, timezone) : null;
-          const overdue = days !== null && days < 0 && !finished && r.key !== 'contract_date';
+          const overdue = days !== null && days < 0 && !finished && r.key !== 'contract_date' && r.key !== 'bc_contract_date';
           const isNext = r.key === nextKey;
           return (
             <li key={r.key} className={cn('flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-sm', isNext ? 'bg-primary/10' : overdue ? 'bg-critical/10' : 'bg-muted/50')}>
@@ -308,7 +316,7 @@ function DatesPanel({ tx, timezone }: { tx: TransactionRow; timezone: string }) 
                   )}
                 </span>
               ) : (
-                <EditDatesButton txId={tx.id} dates={dates} focusKey={r.key} variant="add" />
+                <EditDatesButton txId={tx.id} dates={dates} focusKey={r.key} variant="add" split={split} />
               )}
             </li>
           );
@@ -426,6 +434,14 @@ function Financials({ tx, ws, editHref }: { tx: TransactionRow; ws: DealWorkspac
         ['Listing price', money(ws.property?.listPrice ?? null)],
         ['Offer price', money(tx.offer_price)],
         ['Close price', money(tx.sale_price)],
+        ...(isSplitDeal(tx)
+          ? ([
+              ['A-B Purchase price', money(tx.purchase_price)],
+              ['B-C Purchase price', money(tx.bc_purchase_price)],
+              ['A-B EMD', money(tx.earnest_money)],
+              ['B-C EMD', money(tx.bc_earnest_money)],
+            ] as [string, string][])
+          : []),
         ['Earnest money', money(tx.earnest_money)],
         ['Commission rate', tx.commission_rate !== null ? `${tx.commission_rate}%` : '—'],
         ['Commission (GCI)', money(commission)],

@@ -66,6 +66,11 @@ export type TransactionRow = {
   prop_lot_size: string | null;
   prop_year_built: string | null;
   prop_county: string | null;
+  bc_contract_date: string | null;
+  bc_emd_due_date: string | null;
+  bc_closing_date: string | null;
+  bc_purchase_price: number | null;
+  bc_earnest_money: number | null;
 };
 
 export type TransactionListResult = {

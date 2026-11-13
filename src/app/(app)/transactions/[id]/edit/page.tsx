@@ -4,6 +4,7 @@ import { requireContext } from '@/features/auth/guards';
 import { getTeamMembers } from '@/features/leads/queries';
 import { TransactionForm } from '@/features/transactions/components/transaction-form';
 import { getTransaction, getTransactionFormOptions } from '@/features/transactions/queries';
+import { isSplitDeal } from '@/features/transactions/constants';
 import { uuidSchema } from '@/features/transactions/schemas';
 
 export const metadata: Metadata = { title: 'Edit transaction' };
@@ -35,6 +36,7 @@ export default async function EditTransactionPage({ params }: PageProps) {
         members={members}
         submitLabel="Save changes"
         cancelHref={`/transactions/${tx.id}`}
+        split={isSplitDeal(tx)}
         defaults={{
           transaction_id: tx.id,
           name: tx.name,
@@ -60,6 +62,11 @@ export default async function EditTransactionPage({ params }: PageProps) {
           closing_date: d(tx.closing_date),
           emd_due_date: d(tx.emd_due_date),
           contingency_end_date: d(tx.contingency_end_date),
+          bc_contract_date: d(tx.bc_contract_date),
+          bc_emd_due_date: d(tx.bc_emd_due_date),
+          bc_closing_date: d(tx.bc_closing_date),
+          bc_purchase_price: s(tx.bc_purchase_price),
+          bc_earnest_money: s(tx.bc_earnest_money),
         }}
       />
     </div>

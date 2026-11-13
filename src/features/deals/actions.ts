@@ -54,6 +54,8 @@ const HEADER_FIELDS = {
   transaction_coordinator: text(200),
   purchase_price: money,
   earnest_money: money,
+  bc_purchase_price: money,
+  bc_earnest_money: money,
   // Deal details panel
   contingency_type: text(200),
   escrow_type: text(200),

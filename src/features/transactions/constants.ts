@@ -27,6 +27,34 @@ export const KEY_DATES = [
 ] as const;
 export type KeyDateKey = (typeof KEY_DATES)[number]['key'];
 
+/**
+ * A-C (double close) deals track both legs: A-B (buy from the seller) in the
+ * usual columns and B-C (sell to the end buyer) in the bc_* columns.
+ */
+export const SPLIT_KEY_DATES = [
+  { key: 'contract_date', label: 'A-B Ratified date' },
+  { key: 'bc_contract_date', label: 'B-C Ratified date' },
+  { key: 'emd_due_date', label: 'A-B EMD due date' },
+  { key: 'bc_emd_due_date', label: 'B-C EMD due date' },
+  { key: 'contingency_end_date', label: 'Contingency end date' },
+  { key: 'closing_date', label: 'A-B Closing date' },
+  { key: 'bc_closing_date', label: 'B-C Closing date' },
+] as const;
+export type DateKey = KeyDateKey | (typeof SPLIT_KEY_DATES)[number]['key'];
+export const keyDatesFor = (split: boolean): readonly { key: DateKey; label: string }[] => (split ? SPLIT_KEY_DATES : KEY_DATES);
+
+/** Show the A-B / B-C split: A-C Closing deals, or any deal that already has B-C values. */
+export const isSplitDeal = (tx: {
+  deal_stage: string;
+  bc_contract_date: string | null;
+  bc_emd_due_date: string | null;
+  bc_closing_date: string | null;
+  bc_purchase_price: number | null;
+  bc_earnest_money: number | null;
+}) =>
+  tx.deal_stage === 'ac_closing' ||
+  [tx.bc_contract_date, tx.bc_emd_due_date, tx.bc_closing_date, tx.bc_purchase_price, tx.bc_earnest_money].some((v) => v !== null);
+
 export const FILE_CATEGORY_VALUES = [
   'contract', 'addendum', 'disclosure', 'inspection', 'appraisal', 'id_document', 'photo', 'other',
 ] as const;

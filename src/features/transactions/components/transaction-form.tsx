@@ -9,7 +9,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { FormField, FormMessage } from '@/features/auth/components/form-field';
 import type { TeamMember } from '@/features/leads/types';
 import { saveTransaction } from '../actions';
-import { KEY_DATES, TX_SIDE, TX_SIDE_VALUES, TX_STATUS, TX_STATUS_VALUES } from '../constants';
+import { keyDatesFor, TX_SIDE, TX_SIDE_VALUES, TX_STATUS, TX_STATUS_VALUES } from '../constants';
 import type { Option } from '../types';
 
 type Defaults = Partial<Record<string, string>>;
@@ -53,6 +53,7 @@ export function TransactionForm({
   submitLabel,
   cancelHref,
   dealStage,
+  split = false,
 }: {
   defaults: Defaults;
   contacts: Option[];
@@ -62,6 +63,8 @@ export function TransactionForm({
   cancelHref: string;
   /** New deal started from a deal-stage page: lands in that stage. */
   dealStage?: string;
+  /** A-C deal: separate A-B and B-C dates, purchase price and EMD. */
+  split?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(saveTransaction, {});
   const v: Defaults = state.values ?? defaults;
@@ -127,7 +130,6 @@ export function TransactionForm({
                   <FormField name="new_state" label="State" defaultValue={v.new_state} errors={e.new_state} />
                   <FormField name="new_postal_code" label="ZIP" defaultValue={v.new_postal_code} errors={e.new_postal_code} />
                 </div>
-                <FormField name="list_price" label="List price" inputMode="numeric" placeholder="$" defaultValue={v.list_price} errors={e.list_price} />
               </div>
             )}
             <div className="grid gap-4 sm:grid-cols-2">
@@ -148,7 +150,7 @@ export function TransactionForm({
               <CardDescription>The next date drives the countdown on the deal page.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              {KEY_DATES.map((k) => (
+              {keyDatesFor(split).map((k) => (
                 <FormField key={k.key} name={k.key} label={k.label} type="date" defaultValue={v[k.key]} errors={e[k.key]} />
               ))}
             </CardContent>
@@ -156,8 +158,19 @@ export function TransactionForm({
           <Card>
             <CardHeader><CardTitle>Financials</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <FormField name="purchase_price" label="Purchase price" inputMode="numeric" placeholder="$" defaultValue={v.purchase_price} errors={e.purchase_price} />
-              <FormField name="earnest_money" label="EMD" inputMode="numeric" placeholder="$" defaultValue={v.earnest_money} errors={e.earnest_money} />
+              {split ? (
+                <>
+                  <FormField name="purchase_price" label="A-B Purchase price" inputMode="numeric" placeholder="$" defaultValue={v.purchase_price} errors={e.purchase_price} />
+                  <FormField name="bc_purchase_price" label="B-C Purchase price" inputMode="numeric" placeholder="$" defaultValue={v.bc_purchase_price} errors={e.bc_purchase_price} />
+                  <FormField name="earnest_money" label="A-B EMD" inputMode="numeric" placeholder="$" defaultValue={v.earnest_money} errors={e.earnest_money} />
+                  <FormField name="bc_earnest_money" label="B-C EMD" inputMode="numeric" placeholder="$" defaultValue={v.bc_earnest_money} errors={e.bc_earnest_money} />
+                </>
+              ) : (
+                <>
+                  <FormField name="purchase_price" label="Purchase price" inputMode="numeric" placeholder="$" defaultValue={v.purchase_price} errors={e.purchase_price} />
+                  <FormField name="earnest_money" label="EMD" inputMode="numeric" placeholder="$" defaultValue={v.earnest_money} errors={e.earnest_money} />
+                </>
+              )}
             </CardContent>
           </Card>
           {/* Fields no longer on the form: carried through unchanged so saving doesn't wipe them. */}

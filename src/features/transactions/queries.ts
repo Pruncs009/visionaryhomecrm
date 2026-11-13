@@ -46,6 +46,11 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     prop_lot_size: (r.prop_lot_size as string | null) ?? null,
     prop_year_built: (r.prop_year_built as string | null) ?? null,
     prop_county: (r.prop_county as string | null) ?? null,
+    bc_contract_date: (r.bc_contract_date as string | null) ?? null,
+    bc_emd_due_date: (r.bc_emd_due_date as string | null) ?? null,
+    bc_closing_date: (r.bc_closing_date as string | null) ?? null,
+    bc_purchase_price: num(r.bc_purchase_price),
+    bc_earnest_money: num(r.bc_earnest_money),
   };
 }
 

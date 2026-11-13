@@ -39,6 +39,7 @@ export default async function NewTransactionPage({ searchParams }: PageProps) {
         submitLabel="Create deal"
         cancelHref={stage ? stageHref(stage) : '/transactions'}
         dealStage={stage ?? undefined}
+        split={stage === 'ac_closing'}
         defaults={{
           side: 'buyer',
           status: 'under_contract',

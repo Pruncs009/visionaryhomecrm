@@ -19,6 +19,8 @@ const LABEL: Record<DealHeaderField, string> = {
   acquisition_manager: 'Acquisition Manager',
   transaction_coordinator: 'Transaction coordinator',
   earnest_money: 'EMD',
+  bc_purchase_price: 'B-C Purchase price',
+  bc_earnest_money: 'B-C EMD',
   contingency_type: 'Contingency type',
   escrow_type: 'Escrow type',
   escrow_number: 'Escrow #',
@@ -99,7 +101,7 @@ function AutoGrowTextarea({ value, onChange, onBlur, onEnter, onEscape, classNam
   );
 }
 
-const MONEY_FIELDS: DealHeaderField[] = ['purchase_price', 'earnest_money', 'arv_estimate', 'rehab_estimate'];
+const MONEY_FIELDS: DealHeaderField[] = ['purchase_price', 'earnest_money', 'arv_estimate', 'rehab_estimate', 'bc_purchase_price', 'bc_earnest_money'];
 
 const formatMoney = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
@@ -117,6 +119,7 @@ export function DealHeaderField({
   labelClassName,
   multiline,
   fitLabel,
+  label: labelOverride,
 }: {
   id: string;
   field: DealHeaderField;
@@ -130,6 +133,8 @@ export function DealHeaderField({
   multiline?: boolean;
   /** Keep the label on one line, shrinking its font if it's long (lines up rows of fields). */
   fitLabel?: boolean;
+  /** Overrides the usual field name (e.g. "A-B Purchase price"). */
+  label?: string;
 }) {
   const inputId = useId();
   const listId = useId();
@@ -152,7 +157,7 @@ export function DealHeaderField({
       const next = show(r.value);
       setSaved(next);
       setDraft(next);
-      toast.success(`${LABEL[field]} saved`);
+      toast.success(`${labelOverride ?? LABEL[field]} saved`);
     });
   };
 
@@ -164,8 +169,8 @@ export function DealHeaderField({
           {suggestions.map((s) => <option key={s} value={s} />)}
         </datalist>
       )}
-      <label htmlFor={inputId} title={LABEL[field]} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>
-        {fitLabel ? <FitText max={11} min={8}>{LABEL[field]}</FitText> : LABEL[field]}
+      <label htmlFor={inputId} title={labelOverride ?? LABEL[field]} className={cn('block text-xs', labelClassName ?? 'text-muted-foreground')}>
+        {fitLabel ? <FitText max={11} min={8}>{labelOverride ?? LABEL[field]}</FitText> : labelOverride ?? LABEL[field]}
       </label>
       {multiline ? (
         <AutoGrowTextarea

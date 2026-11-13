@@ -71,6 +71,12 @@ export const transactionFormSchema = z
     closing_date: optionalDate,
     emd_due_date: optionalDate,
     contingency_end_date: optionalDate,
+    // B-C leg (A-C Closing deals)
+    bc_contract_date: optionalDate,
+    bc_emd_due_date: optionalDate,
+    bc_closing_date: optionalDate,
+    bc_purchase_price: money,
+    bc_earnest_money: money,
   })
   .superRefine((d, ctx) => {
     if (d.property_mode === 'existing' && !d.property_id) {
@@ -81,6 +87,9 @@ export const transactionFormSchema = z
     }
     if (d.contract_date && d.closing_date && d.closing_date < d.contract_date) {
       ctx.addIssue({ code: 'custom', path: ['closing_date'], message: 'Closing must be on or after the ratified date' });
+    }
+    if (d.bc_contract_date && d.bc_closing_date && d.bc_closing_date < d.bc_contract_date) {
+      ctx.addIssue({ code: 'custom', path: ['bc_closing_date'], message: 'B-C closing must be on or after the B-C ratified date' });
     }
     if (d.buyer_contact_id && d.buyer_contact_id === d.seller_contact_id) {
       ctx.addIssue({ code: 'custom', path: ['seller_contact_id'], message: 'Buyer and seller must be different people' });

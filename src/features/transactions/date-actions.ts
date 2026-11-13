@@ -20,10 +20,16 @@ const datesSchema = z
     emd_due_date: date,
     contingency_end_date: date,
     closing_date: date,
+    bc_contract_date: date,
+    bc_emd_due_date: date,
+    bc_closing_date: date,
   })
   .superRefine((d, ctx) => {
     if (d.contract_date && d.closing_date && d.closing_date < d.contract_date) {
       ctx.addIssue({ code: 'custom', path: ['closing_date'], message: 'Closing must be on or after the ratified date.' });
+    }
+    if (d.bc_contract_date && d.bc_closing_date && d.bc_closing_date < d.bc_contract_date) {
+      ctx.addIssue({ code: 'custom', path: ['bc_closing_date'], message: 'B-C closing must be on or after the B-C ratified date.' });
     }
   });
 export type DealDatesInput = z.input<typeof datesSchema>;
@@ -49,7 +55,7 @@ export async function updateDealDates(txId: string, input: DealDatesInput): Prom
 
   const { error } = await supabase
     .from('transactions')
-    .update(parsed.data)
+    .update(Object.fromEntries(Object.entries(parsed.data).filter(([k]) => k in (input as object))))
     .eq('organization_id', ctx.organization.id)
     .eq('id', txId);
   if (error) {

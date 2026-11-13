@@ -12,12 +12,6 @@ export const loginSchema = z.object({
   next: z.string().optional(),
 });
 
-export const signupSchema = z.object({
-  full_name: z.string().trim().min(1, 'Enter your name').max(100),
-  organization_name: z.string().trim().max(120).optional(),
-  email,
-  password: newPassword,
-});
 
 export const forgotPasswordSchema = z.object({ email });
 

@@ -8,7 +8,6 @@ import {
   forgotPasswordSchema,
   loginSchema,
   resetPasswordSchema,
-  signupSchema,
 } from './schemas';
 import { setPendingEmail } from './pending-email';
 import type { ActionState } from './types';
@@ -58,52 +57,6 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
 
   // redirect() throws, so it must stay outside any try/catch.
   redirect(safeRedirectPath(parsed.data.next));
-}
-
-// -----------------------------------------------------------------------------
-// Sign up — the DB trigger creates profile + organization + owner membership
-// -----------------------------------------------------------------------------
-export async function signup(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const raw = {
-    full_name: str(formData, 'full_name'),
-    organization_name: str(formData, 'organization_name') || undefined,
-    email: str(formData, 'email'),
-    password: str(formData, 'password'),
-  };
-  const values = {
-    full_name: raw.full_name,
-    organization_name: raw.organization_name ?? '',
-    email: raw.email,
-  };
-
-  const parsed = signupSchema.safeParse(raw);
-  if (!parsed.success) {
-    return { fieldErrors: parsed.error.flatten().fieldErrors, values };
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      emailRedirectTo: `${await getOrigin()}/auth/callback?next=/dashboard`,
-      data: {
-        full_name: parsed.data.full_name,
-        organization_name: parsed.data.organization_name,
-      },
-    },
-  });
-
-  if (error) {
-    return { error: error.message, values };
-  }
-
-  // Email confirmation disabled in Supabase → user is signed in immediately.
-  if (data.session) redirect('/dashboard');
-
-  // Confirmation required → "check your inbox" screen with a resend button.
-  await setPendingEmail(parsed.data.email);
-  redirect('/verify-email');
 }
 
 // -----------------------------------------------------------------------------

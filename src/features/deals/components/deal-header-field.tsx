@@ -30,6 +30,16 @@ const LABEL: Record<DealHeaderField, string> = {
   occupancy: 'Occupancy',
   ownership_type: 'Ownership type',
   ethnicity: 'Ethnicity',
+  prop_last_sold_prior: 'Last Sold Date Prior Acquisition',
+  prop_seller_age: 'Age of Seller @ Acquisition',
+  prop_equity: 'Equity @ Acquisition',
+  prop_stories: 'Stories',
+  prop_beds: 'Bed',
+  prop_baths: 'Bath',
+  prop_bldg_sqft: 'Bldg Sqft',
+  prop_lot_size: 'Lot Size',
+  prop_year_built: 'Year Built',
+  prop_county: 'County',
 };
 
 /**

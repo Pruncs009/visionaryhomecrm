@@ -36,6 +36,16 @@ function normalize(r: Record<string, unknown>): TransactionRow {
     occupancy: (r.occupancy as string | null) ?? null,
     ownership_type: (r.ownership_type as string | null) ?? null,
     ethnicity: (r.ethnicity as string | null) ?? null,
+    prop_last_sold_prior: (r.prop_last_sold_prior as string | null) ?? null,
+    prop_seller_age: (r.prop_seller_age as string | null) ?? null,
+    prop_equity: (r.prop_equity as string | null) ?? null,
+    prop_stories: (r.prop_stories as string | null) ?? null,
+    prop_beds: (r.prop_beds as string | null) ?? null,
+    prop_baths: (r.prop_baths as string | null) ?? null,
+    prop_bldg_sqft: (r.prop_bldg_sqft as string | null) ?? null,
+    prop_lot_size: (r.prop_lot_size as string | null) ?? null,
+    prop_year_built: (r.prop_year_built as string | null) ?? null,
+    prop_county: (r.prop_county as string | null) ?? null,
   };
 }
 

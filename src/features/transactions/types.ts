@@ -56,6 +56,16 @@ export type TransactionRow = {
   occupancy: string | null;
   ownership_type: string | null;
   ethnicity: string | null;
+  prop_last_sold_prior: string | null;
+  prop_seller_age: string | null;
+  prop_equity: string | null;
+  prop_stories: string | null;
+  prop_beds: string | null;
+  prop_baths: string | null;
+  prop_bldg_sqft: string | null;
+  prop_lot_size: string | null;
+  prop_year_built: string | null;
+  prop_county: string | null;
 };
 
 export type TransactionListResult = {

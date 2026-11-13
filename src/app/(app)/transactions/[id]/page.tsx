@@ -115,12 +115,6 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   const prop = ws.property;
   const openTasks = ws.tasks.filter((t) => !t.done).length;
 
-  const specs = [
-    prop?.bedrooms != null && `${prop.bedrooms} Bed`,
-    prop?.bathrooms != null && `${prop.bathrooms} Bath`,
-    prop?.squareFeet != null && `${prop.squareFeet.toLocaleString('en-US')} SF`,
-    prop?.yearBuilt != null && `Built ${prop.yearBuilt}`,
-  ].filter(Boolean) as string[];
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-4">
@@ -140,15 +134,36 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
               <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-semibold tracking-wide text-primary uppercase">{SIDE_BADGE[tx.side]}</span>
               <span className="text-muted-foreground">{TX_SIDE[tx.side]}{prop?.propertyType ? ` ·${label(prop.propertyType)}` : ''}</span>
             </div>
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{tx.property_address || tx.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {[tx.property_city, [tx.property_state, prop?.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
-              {prop?.mlsNumber && <> <span aria-hidden>|</span> MLS# {prop.mlsNumber}</>}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {specs.length > 0 ? specs.join(' · ') : null}
-              {tx.name !== tx.property_address && <>{specs.length > 0 && <span aria-hidden> | </span>}Deal: {tx.name}</>}
-            </p>
+            {/* Full address on one line */}
+            <h1 className="text-2xl font-semibold tracking-tight break-words">
+              {[tx.property_address || tx.name, tx.property_city, [tx.property_state, prop?.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
+            </h1>
+            {(prop?.mlsNumber || tx.name !== tx.property_address) && (
+              <p className="text-sm text-muted-foreground">
+                {prop?.mlsNumber && <>MLS# {prop.mlsNumber}</>}
+                {prop?.mlsNumber && tx.name !== tx.property_address && <span aria-hidden> | </span>}
+                {tx.name !== tx.property_address && <>Deal: {tx.name}</>}
+              </p>
+            )}
+            {/* Property details: small, free text, wraps so nothing is cut off */}
+            <div className="grid max-w-3xl grid-cols-2 gap-x-3 gap-y-1.5 pt-1 sm:grid-cols-3 lg:grid-cols-5">
+              {PROPERTY_DETAILS.map(([f, fallback]) => {
+                const v = tx[f] ?? fallback(prop);
+                return (
+                  <DealHeaderField
+                    key={`${f}-${v ?? ''}`}
+                    id={tx.id}
+                    field={f}
+                    value={v}
+                    placeholder="—"
+                    multiline
+                    className="space-y-0.5"
+                    labelClassName="text-[11px] leading-tight text-muted-foreground"
+                    inputClassName="min-h-7 px-2 py-1 text-xs md:text-xs"
+                  />
+                );
+              })}
+            </div>
             <div className="grid max-w-2xl gap-3 pt-2 sm:grid-cols-3">
               <DealHeaderField key={`cn-${tx.campaign_name ?? ''}`} id={tx.id} field="campaign_name" value={tx.campaign_name} placeholder="e.g. Absentee owners Q4" multiline />
               <ChoiceField key={`ch-${tx.channel ?? ''}`} id={tx.id} field="channel" value={tx.channel} options={CHANNELS} othersPlaceholder="Enter channel" />
@@ -295,6 +310,28 @@ function DatesPanel({ tx, timezone }: { tx: TransactionRow; timezone: string }) 
 // -----------------------------------------------------------------------------
 // Right column: deal details (free-text fields, saved as you type → Enter / click away)
 // -----------------------------------------------------------------------------
+type PropertyInfo = DealWorkspace['property'];
+/**
+ * Property details under the address, in the order shown. Until a value is typed
+ * for this deal, beds / baths / sqft / year built show what the property record has.
+ */
+const PROPERTY_DETAILS: [
+  'prop_last_sold_prior' | 'prop_seller_age' | 'prop_equity' | 'prop_stories' | 'prop_beds' | 'prop_baths'
+    | 'prop_bldg_sqft' | 'prop_lot_size' | 'prop_year_built' | 'prop_county',
+  (p: PropertyInfo) => string | null,
+][] = [
+  ['prop_last_sold_prior', () => null],
+  ['prop_seller_age', () => null],
+  ['prop_equity', () => null],
+  ['prop_stories', () => null],
+  ['prop_beds', (p) => (p?.bedrooms != null ? String(p.bedrooms) : null)],
+  ['prop_baths', (p) => (p?.bathrooms != null ? String(p.bathrooms) : null)],
+  ['prop_bldg_sqft', (p) => (p?.squareFeet != null ? p.squareFeet.toLocaleString('en-US') : null)],
+  ['prop_lot_size', () => null],
+  ['prop_year_built', (p) => (p?.yearBuilt != null ? String(p.yearBuilt) : null)],
+  ['prop_county', () => null],
+];
+
 /** Field names in the Deal details panel: dark blue, regular weight. */
 const detailLabel = 'font-normal text-blue-900 dark:text-blue-300';
 

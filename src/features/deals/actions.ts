@@ -68,6 +68,17 @@ const HEADER_FIELDS = {
   occupancy: text(200),
   ownership_type: text(100),
   ethnicity: text(100),
+  // Property details under the address (free text)
+  prop_last_sold_prior: text(200),
+  prop_seller_age: text(200),
+  prop_equity: text(200),
+  prop_stories: text(200),
+  prop_beds: text(200),
+  prop_baths: text(200),
+  prop_bldg_sqft: text(200),
+  prop_lot_size: text(200),
+  prop_year_built: text(200),
+  prop_county: text(200),
 } as const;
 export type DealHeaderField = keyof typeof HEADER_FIELDS;
 

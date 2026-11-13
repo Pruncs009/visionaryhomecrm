@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ArrowRightLeft, BarChart3, Calendar, CircleCheckBig, CircleSlash, FileSignature, Hammer, LayoutDashboard,
-  FileSpreadsheet, Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, type LucideIcon,
+  FileSpreadsheet, Gauge, Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, type LucideIcon,
 } from 'lucide-react';
 import { mainNav, type NavIcon } from '@/config/navigation';
 import type { DealStage } from '@/features/deals/constants';
@@ -25,6 +25,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   dead: CircleSlash,
   deleted: Trash2,
   pipeline_review: FileSpreadsheet,
+  kpi: Gauge,
   calendar: Calendar,
   reports: BarChart3,
   settings: Settings,

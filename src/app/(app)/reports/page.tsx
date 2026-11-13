@@ -15,6 +15,7 @@ import { getAnalyticsReport, parseRange } from '@/features/analytics/queries';
 import { RANGE_OPTIONS } from '@/features/analytics/types';
 import { CardSkeleton, KpiSkeleton, WidgetError } from '@/features/dashboard/components/widget-states';
 import { getTeamMembers } from '@/features/leads/queries';
+import { ReportTabs } from '@/features/kpi/components/report-tabs';
 import { isValidTimeZone } from '@/lib/dates';
 
 export const metadata: Metadata = { title: 'Reports' };
@@ -35,6 +36,7 @@ export default async function ReportsPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
+      <ReportTabs current="/reports" />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>

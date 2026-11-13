@@ -14,7 +14,20 @@ import { cn } from '@/lib/utils';
  * "Full screen" stretches the sheet over the whole CRM window (same iframe, so
  * it doesn't reload).
  */
-export function SheetEmbed({ sheetId, gid }: { sheetId: string; gid: string }) {
+export function SheetEmbed({
+  sheetId,
+  gid,
+  title = 'Pipeline Review Tracker',
+  description = "The team's Google Sheet, right here. Changes made here are saved in Google Sheets, and changes made in Google Sheets show here.",
+  extra,
+}: {
+  sheetId: string;
+  gid: string;
+  title?: string;
+  description?: string;
+  /** Extra links under the description (e.g. to the KPI report). */
+  extra?: React.ReactNode;
+}) {
   const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [full, setFull] = useState(false);
@@ -64,7 +77,7 @@ export function SheetEmbed({ sheetId, gid }: { sheetId: string; gid: string }) {
           full ? 'fixed inset-0 z-[60] flex flex-col gap-2 bg-background p-2' : 'relative',
         )}
         role={full ? 'dialog' : undefined}
-        aria-label={full ? 'Pipeline Review Tracker, full screen' : undefined}
+        aria-label={full ? `${title}, full screen` : undefined}
       >
         <div className={cn('relative overflow-hidden rounded-xl ring-1 ring-foreground/10', full && 'min-h-0 flex-1')}>
           {loading && (
@@ -73,7 +86,7 @@ export function SheetEmbed({ sheetId, gid }: { sheetId: string; gid: string }) {
           <iframe
             key={reloadKey}
             src={editUrl}
-            title="Pipeline Review Tracker (Google Sheets)"
+            title={`${title} (Google Sheets)`}
             onLoad={() => setLoading(false)}
             className={cn('block w-full bg-white', full ? 'h-full' : 'h-[calc(100dvh-7.5rem)] min-h-[520px]')}
             allow="clipboard-read; clipboard-write"
@@ -84,10 +97,9 @@ export function SheetEmbed({ sheetId, gid }: { sheetId: string; gid: string }) {
 
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline Review Tracker</h1>
-          <p className="text-sm text-muted-foreground">
-            The team&apos;s Google Sheet, right here. Changes made here are saved in Google Sheets, and changes made in Google Sheets show here.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-sm text-muted-foreground">{description}</p>
+          {extra}
           <p className="text-xs text-muted-foreground">
             If the sheet asks you to sign in, click <strong>Sign in to Google</strong>, sign in with the account the sheet is shared with, then click <strong>Reload</strong>.
           </p>

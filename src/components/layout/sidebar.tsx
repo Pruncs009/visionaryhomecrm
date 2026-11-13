@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   ArrowRightLeft, BarChart3, Calendar, CircleCheckBig, CircleSlash, FileSignature, Hammer, LayoutDashboard,
-  Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, type LucideIcon,
+  FileSpreadsheet, Megaphone, MoveRight, Repeat, Settings, ShieldOff, Trash2, type LucideIcon,
 } from 'lucide-react';
 import { mainNav, type NavIcon } from '@/config/navigation';
 import type { DealStage } from '@/features/deals/constants';
@@ -24,6 +24,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   off_market: ShieldOff,
   dead: CircleSlash,
   deleted: Trash2,
+  pipeline_review: FileSpreadsheet,
   calendar: Calendar,
   reports: BarChart3,
   settings: Settings,
@@ -44,7 +45,7 @@ export function Sidebar({ counts, deletedCount = 0 }: { counts: Partial<Record<D
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || highlight === item.href;
           const count = item.stage ? counts[item.stage] ?? 0 : item.icon === 'deleted' ? deletedCount : null;
           // Thin dividers: [Dashboard] | [deal stages] | [Calendar, Reports, Settings]
-          const divider = i === 1 || (item.icon === 'calendar');
+          const divider = i === 1 || item.icon === 'pipeline_review';
           return (
             <div key={item.href}>
               {divider && <div className="mx-3 my-2 border-t" aria-hidden />}

@@ -9,13 +9,14 @@ export type NavItem = { title: string; href: string; icon: NavIcon; stage?: Deal
 export type NavIcon =
   | 'dashboard' | 'calendar' | 'reports' | 'settings'
   | 'under_contract' | 'under_dispo' | 'under_rehab' | 'ab_closing' | 'bc_closing' | 'ac_closing'
-  | 'closed' | 'off_market' | 'dead' | 'deleted';
+  | 'closed' | 'off_market' | 'dead' | 'deleted' | 'pipeline_review';
 
 export const mainNav: NavItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: 'dashboard' },
   ...DEAL_STAGE_VALUES.map((s) => ({ title: DEAL_STAGE[s].label, href: stageHref(s), icon: s, stage: s })),
   { title: 'Deleted', href: '/deals/deleted', icon: 'deleted' },
-  { title: 'Calendar', href: '/calendar', icon: 'calendar' },
+  // Replaces Calendar in the menu (the /calendar page still works by URL).
+  { title: 'Pipeline Review Tracker', href: '/pipeline-review', icon: 'pipeline_review' },
   { title: 'Reports', href: '/reports', icon: 'reports' },
   { title: 'Settings', href: '/settings', icon: 'settings' },
 ];
